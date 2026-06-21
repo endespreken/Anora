@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Hash, Radar, UserPlus, Zap, MapPin, X } from 'lucide-react';
+import { Hash, Radar, UserPlus, Zap, MapPin, X, Lock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchFriends } from '../../services/dbServices';
 
-export default function Sidebar({ currentChannel, changeChannel, openPinModal, openNearbyModal, unreadMentions = [], isOpen, onClose }) {
-  const { user } = useAuth();
+export default function Sidebar({ currentChannel, changeChannel, openPinModal, openNearbyModal, unreadMentions = [], isOpen, onClose, privateChannels = [], closePrivateChannel }) {
+  const { user, pseudo } = useAuth();
   const [friends, setFriends] = useState([]);
   
   const channels = ['general', 'tech', 'random', 'help'];
@@ -71,6 +71,51 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
             })}
           </ul>
         </div>
+
+        {privateChannels.length > 0 && (
+          <div>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-3 px-2">
+              Private Messages
+            </h2>
+            <ul className="space-y-1">
+              {privateChannels.map(channel => {
+                const isActive = currentChannel === channel;
+                const isUnread = unreadMentions.includes(channel);
+                
+                const parts = channel.replace('@', '').split('-');
+                const targetUser = parts.find(p => p !== pseudo) || parts[0];
+
+                return (
+                  <li key={channel} className="group relative">
+                    <button 
+                      onClick={() => changeChannel(channel)}
+                      className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                        isActive 
+                        ? 'bg-primary/10 text-primary font-semibold shadow-sm' 
+                        : isUnread 
+                          ? 'text-accent animate-pulse bg-accent/10 font-bold'
+                          : 'text-textMuted hover:bg-secondary/50 hover:text-text'
+                      }`}
+                    >
+                      <Lock size={16} className={`mr-3 ${isActive ? 'text-primary' : 'text-textMuted'}`} /> 
+                      <span className="capitalize">{targetUser}</span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closePrivateChannel(channel);
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-textMuted hover:text-accent hover:bg-secondary/80 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
+                      title="Close"
+                    >
+                      <X size={14} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
         <div>
           <div className="flex items-center justify-between mb-3 px-2">

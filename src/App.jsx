@@ -21,8 +21,43 @@ function App() {
   const [unreadMentions, setUnreadMentions] = useState([]);
   const [hasJoined, setHasJoined] = useState(false);
   const { user, pseudo } = useAuth();
+  const [privateChannels, setPrivateChannels] = useState([]);
+  
+  // Load private channels when pseudo changes
+  useEffect(() => {
+    if (pseudo) {
+      const saved = localStorage.getItem(`anora_pm_${pseudo}`);
+      if (saved) {
+        setPrivateChannels(JSON.parse(saved));
+      } else {
+        setPrivateChannels([]);
+      }
+    }
+  }, [pseudo]);
+
+  // Wrapper to save to localStorage safely
+  const updatePrivateChannels = (updater) => {
+    setPrivateChannels(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (pseudo) localStorage.setItem(`anora_pm_${pseudo}`, JSON.stringify(next));
+      return next;
+    });
+  };
   
   const { messages, onlineUsers, typingUsers, loading, setMessages, broadcastTyping } = useChatRealtime(currentChannel, user, pseudo);
+
+  useEffect(() => {
+    if (currentChannel.startsWith('@') && !privateChannels.includes(currentChannel)) {
+      updatePrivateChannels(prev => [...prev, currentChannel]);
+    }
+  }, [currentChannel, privateChannels]);
+
+  const closePrivateChannel = (channelToClose) => {
+    updatePrivateChannels(prev => prev.filter(c => c !== channelToClose));
+    if (currentChannel === channelToClose) {
+      setCurrentChannel('general');
+    }
+  };
   
   // Global Listener for Messages (Sounds and Mentions)
   useEffect(() => {
@@ -42,7 +77,7 @@ function App() {
 
         // It's from someone else
         const isMention = newMsg.content.includes(`@${pseudo}`);
-        const isPMChannel = newMsg.channel_name.includes(pseudo); // Asumsi sederhana PM
+        const isPMChannel = newMsg.channel_name.startsWith('@') && newMsg.channel_name.includes(pseudo);
         const isAnora = newMsg.user_pseudo.includes('Anora');
 
         if (newMsg.channel_name === currentChannel) {
@@ -54,6 +89,13 @@ function App() {
             if (!prev.includes(newMsg.channel_name)) return [...prev, newMsg.channel_name];
             return prev;
           });
+          
+          if (isPMChannel && newMsg.channel_name.startsWith('@')) {
+            updatePrivateChannels(prev => {
+              if (!prev.includes(newMsg.channel_name)) return [...prev, newMsg.channel_name];
+              return prev;
+            });
+          }
         }
 
         // Play sounds
@@ -151,6 +193,8 @@ function App() {
         unreadMentions={unreadMentions}
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
+        privateChannels={privateChannels}
+        closePrivateChannel={closePrivateChannel}
       />
       
       <div className="flex-1 flex flex-col min-w-0 relative">
