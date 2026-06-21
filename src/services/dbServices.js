@@ -98,3 +98,75 @@ export const fetchFriends = async (userId) => {
   const friendIds = data.map(link => link.user_a_id === userId ? link.user_b_id : link.user_a_id);
   return friendIds;
 };
+
+// --- New logic for Registration ---
+
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export const checkNicknameExists = async (nickname) => {
+  const { data, error } = await supabase
+    .from('registered_users')
+    .select('nickname')
+    .ilike('nickname', nickname)
+    .maybeSingle();
+    
+  if (error) console.error("Error checking nickname:", error);
+  return !!data;
+};
+
+export const checkEmailExists = async (email) => {
+  const { data, error } = await supabase
+    .from('registered_users')
+    .select('email')
+    .ilike('email', email)
+    .maybeSingle();
+    
+  if (error) console.error("Error checking email:", error);
+  return !!data;
+};
+
+export const registerNickname = async (nickname, password, email) => {
+  const passwordHash = await hashPassword(password);
+  const { error } = await supabase
+    .from('registered_users')
+    .insert([
+      { nickname, email, password_hash: passwordHash }
+    ]);
+    
+  if (error) {
+    console.error("Error registering nickname:", error);
+    return false;
+  }
+  return true;
+};
+
+export const verifyNickname = async (nickname, password) => {
+  const passwordHash = await hashPassword(password);
+  const { data, error } = await supabase
+    .from('registered_users')
+    .select('password_hash')
+    .ilike('nickname', nickname)
+    .maybeSingle();
+    
+  if (error || !data) return false;
+  return data.password_hash === passwordHash;
+};
+
+export const markMessagesAsRead = async (channel, userPseudo) => {
+  const { error } = await supabase
+    .from('messages')
+    .update({ is_read: true })
+    .eq('channel_name', channel)
+    .neq('user_pseudo', userPseudo)
+    .eq('is_read', false);
+    
+  if (error) {
+    console.error("Error marking messages as read:", error);
+  }
+};

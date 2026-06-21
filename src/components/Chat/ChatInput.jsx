@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Send, Command } from 'lucide-react';
 
-export default function ChatInput({ onSendMessage }) {
+export default function ChatInput({ onSendMessage, broadcastTyping }) {
   const [text, setText] = useState('');
+  const typingTimeoutRef = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -11,6 +12,18 @@ export default function ChatInput({ onSendMessage }) {
     const success = await onSendMessage(text);
     if (success) {
       setText('');
+    }
+  };
+
+  const handleTextChange = (e) => {
+    setText(e.target.value);
+    if (broadcastTyping) {
+      if (!typingTimeoutRef.current) {
+        broadcastTyping();
+        typingTimeoutRef.current = setTimeout(() => {
+          typingTimeoutRef.current = null;
+        }, 2000);
+      }
     }
   };
 
@@ -24,7 +37,7 @@ export default function ChatInput({ onSendMessage }) {
         <input
           type="text"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={handleTextChange}
           placeholder="Message or type /help for commands..."
           className="w-full bg-surface backdrop-blur-xl border border-border text-text placeholder-textMuted rounded-full py-4 pl-12 pr-16 shadow-lg shadow-black/5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300"
           autoComplete="off"

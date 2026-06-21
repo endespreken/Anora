@@ -3,13 +3,13 @@ import MessageBubble from './MessageBubble';
 import { useAuth } from '../../contexts/AuthContext';
 import { MessageSquareDashed } from 'lucide-react';
 
-export default function ChatWindow({ messages, loading }) {
+export default function ChatWindow({ messages, loading, typingUsers = [] }) {
   const { pseudo } = useAuth();
   const bottomRef = useRef(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, typingUsers]);
 
   if (loading) {
     return (
@@ -41,6 +41,20 @@ export default function ChatWindow({ messages, loading }) {
               isOwn={msg.user_pseudo === pseudo}
             />
           ))}
+          {typingUsers.length > 0 && (
+            <div className="text-sm text-textMuted italic flex items-center space-x-2 animate-pulse">
+              <div className="flex space-x-1">
+                <span className="w-1.5 h-1.5 bg-textMuted rounded-full"></span>
+                <span className="w-1.5 h-1.5 bg-textMuted rounded-full animation-delay-200"></span>
+                <span className="w-1.5 h-1.5 bg-textMuted rounded-full animation-delay-400"></span>
+              </div>
+              <span>
+                {typingUsers.length === 1 
+                  ? `${typingUsers[0]} sedang mengetik...` 
+                  : `${typingUsers.length} orang sedang mengetik...`}
+              </span>
+            </div>
+          )}
           <div ref={bottomRef} />
         </div>
       )}

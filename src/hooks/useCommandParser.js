@@ -1,14 +1,21 @@
 import { useAuth } from '../contexts/AuthContext';
-import { sendMessage, addFriendWithPin } from '../services/dbServices';
+import { sendMessage, addFriendWithPin, checkNicknameExists, checkEmailExists, registerNickname, verifyNickname } from '../services/dbServices';
 
-export function useCommandParser(currentChannel, changeChannel, openPinModal) {
-  const { user, pseudo, changePseudo } = useAuth();
+export function useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage) {
+  const { user, pseudo, changePseudo, isRegistered, markAsRegistered } = useAuth();
 
   const parseCommand = async (text) => {
     const trimmed = text.trim();
     if (!trimmed.startsWith('/')) {
       // Normal message
       await sendMessage(currentChannel, pseudo, trimmed);
+      
+      // Anora Bot Auto-Reply (Local Only)
+      if (trimmed.toLowerCase().includes('anora')) {
+        setTimeout(() => {
+          addLocalMessage(`Halo ${pseudo}! Saya Anora, asisten bot di sini. Ada yang bisa saya bantu? Ketik /help untuk melihat perintah.`);
+        }, 600);
+      }
       return true;
     }
 
@@ -27,9 +34,67 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal) {
 
       case 'nick':
         if (args) {
-          const oldPseudo = pseudo;
-          changePseudo(args);
-          await sendMessage(currentChannel, 'SYSTEM', `${oldPseudo} is now known as ${args}`, true);
+          const nickArgs = args.split(' ');
+          const newNick = nickArgs[0];
+          const password = nickArgs[1] || '';
+
+          const isTaken = await checkNicknameExists(newNick);
+          
+          if (isTaken) {
+            if (!password) {
+              addLocalMessage(`Nickname ${newNick} sudah terdaftar. Silakan verifikasi dengan: /nick ${newNick} [password]`);
+              return true;
+            }
+            const isVerified = await verifyNickname(newNick, password);
+            if (isVerified) {
+              const oldPseudo = pseudo;
+              changePseudo(newNick, true);
+              markAsRegistered();
+              await sendMessage(currentChannel, 'SYSTEM', `${oldPseudo} is now known as ${newNick}`, true);
+              addLocalMessage(`Berhasil masuk sebagai ${newNick}.`);
+            } else {
+              addLocalMessage(`Password salah untuk nickname ${newNick}.`);
+            }
+          } else {
+            const oldPseudo = pseudo;
+            changePseudo(newNick, false);
+            await sendMessage(currentChannel, 'SYSTEM', `${oldPseudo} is now known as ${newNick}`, true);
+            addLocalMessage(`Nickname ${newNick} belum terdaftar. Kamu memiliki waktu 5 menit untuk mendaftar menggunakan /register ${newNick} [password] [email], atau namamu akan diacak kembali.`);
+          }
+        }
+        return true;
+
+      case 'register':
+        if (args) {
+          const regArgs = args.split(' ');
+          if (regArgs.length < 3) {
+            addLocalMessage('Format salah. Gunakan: /register [nickname] [password] [email]');
+            return true;
+          }
+          const [regNick, regPass, regEmail] = regArgs;
+          
+          const nickExists = await checkNicknameExists(regNick);
+          if (nickExists) {
+            addLocalMessage(`Maaf, nickname ${regNick} sudah terdaftar. Silakan pilih nickname lain.`);
+            return true;
+          }
+          
+          const emailExists = await checkEmailExists(regEmail);
+          if (emailExists) {
+            addLocalMessage(`Maaf, email ${regEmail} sudah digunakan.`);
+            return true;
+          }
+          
+          const success = await registerNickname(regNick, regPass, regEmail);
+          if (success) {
+            changePseudo(regNick, true);
+            markAsRegistered();
+            addLocalMessage(`Selamat! Nickname ${regNick} berhasil didaftarkan dan kamu sudah diverifikasi.`);
+          } else {
+            addLocalMessage('Terjadi kesalahan saat mendaftar. Silakan coba lagi nanti.');
+          }
+        } else {
+          addLocalMessage('Format salah. Gunakan: /register [nickname] [password] [email]');
         }
         return true;
 
@@ -53,11 +118,17 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal) {
         return true;
         
       case 'help':
-        alert(`Available Commands:
-/join [channel] - Join a chat room
-/nick [name] - Change your nickname
-/beacon [message] - Send a beacon signal
-/addfriend [PIN] - Add friend, or just /addfriend to generate PIN`);
+        await sendMessage(currentChannel, pseudo, "/help"); // Menampilkan command yang diketik user
+        setTimeout(() => {
+          const helpText = `Hai! Saya Anora 🤖. Berikut perintah yang bisa kamu gunakan:
+  /join [channel] - Pindah/masuk ke chat room
+  /nick [name] [password] - Ganti nickname kamu (sertakan password jika terdaftar)
+  /register [nick] [pass] [email] - Daftarkan nickname kamu
+  /beacon [message] - Kirim sinyal beacon
+  /addfriend [PIN] - Tambah teman dengan PIN (kosongkan untuk buat PIN)`;
+          
+          addLocalMessage(helpText);
+        }, 500);
         return true;
 
       default:

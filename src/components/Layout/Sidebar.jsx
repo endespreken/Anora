@@ -3,7 +3,7 @@ import { Hash, Radar, UserPlus, Zap, MapPin } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchFriends } from '../../services/dbServices';
 
-export default function Sidebar({ currentChannel, changeChannel, openPinModal, openNearbyModal }) {
+export default function Sidebar({ currentChannel, changeChannel, openPinModal, openNearbyModal, unreadMentions = [] }) {
   const { user } = useAuth();
   const [friends, setFriends] = useState([]);
   
@@ -36,6 +36,8 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
           <ul className="space-y-1">
             {channels.map(channel => {
               const isActive = currentChannel === channel;
+              const isUnread = unreadMentions.includes(channel);
+              
               return (
                 <li key={channel}>
                   <button 
@@ -43,7 +45,9 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
                     className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 ${
                       isActive 
                       ? 'bg-primary/10 text-primary font-semibold shadow-sm' 
-                      : 'text-textMuted hover:bg-secondary/50 hover:text-text'
+                      : isUnread 
+                        ? 'text-accent animate-pulse bg-accent/10 font-bold'
+                        : 'text-textMuted hover:bg-secondary/50 hover:text-text'
                     }`}
                   >
                     <Hash size={18} className={`mr-3 ${isActive ? 'text-primary' : 'text-textMuted'}`} /> 

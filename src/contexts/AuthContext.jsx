@@ -6,7 +6,9 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [pseudo, setPseudo] = useState('Anon' + Math.floor(Math.random() * 10000));
+  const [isRegistered, setIsRegistered] = useState(false);
   const [loading, setLoading] = useState(true);
+  const timerRef = React.useRef(null);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -44,12 +46,27 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const changePseudo = (newPseudo) => {
+  const changePseudo = (newPseudo, registered = false) => {
     setPseudo(newPseudo);
+    setIsRegistered(registered);
+    
+    if (timerRef.current) clearTimeout(timerRef.current);
+    
+    if (!registered) {
+      timerRef.current = setTimeout(() => {
+        setPseudo('Anon' + Math.floor(Math.random() * 10000));
+        setIsRegistered(false);
+      }, 5 * 60 * 1000); // 5 minutes
+    }
+  };
+
+  const markAsRegistered = () => {
+    setIsRegistered(true);
+    if (timerRef.current) clearTimeout(timerRef.current);
   };
 
   return (
-    <AuthContext.Provider value={{ user, pseudo, changePseudo, loading }}>
+    <AuthContext.Provider value={{ user, pseudo, changePseudo, isRegistered, markAsRegistered, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

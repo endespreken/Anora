@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
 import ChatWindow from './components/Chat/ChatWindow';
@@ -8,15 +8,88 @@ import NearbyUsersModal from './components/Modals/NearbyUsersModal';
 import { useChatRealtime } from './hooks/useChatRealtime';
 import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
+import { supabase } from './config/supabaseClient';
+import { soundManager } from './utils/SoundManager';
+import { markMessagesAsRead } from './services/dbServices';
 
 function App() {
   const [currentChannel, setCurrentChannel] = useState('general');
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isNearbyModalOpen, setIsNearbyModalOpen] = useState(false);
+  const [unreadMentions, setUnreadMentions] = useState([]);
   const { user, pseudo } = useAuth();
   
-  const { messages, onlineUsers, loading } = useChatRealtime(currentChannel, user, pseudo);
+  const { messages, onlineUsers, typingUsers, loading, setMessages, broadcastTyping } = useChatRealtime(currentChannel, user, pseudo);
   
+  // Global Listener for Messages (Sounds and Mentions)
+  useEffect(() => {
+    if (!pseudo) return;
+    
+    const globalChannel = supabase.channel('global_notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        const newMsg = payload.new;
+        
+        // Don't play receive sound for our own message, play send sound when we send (handled in sendMessage)
+        if (newMsg.user_pseudo === pseudo) {
+          // Play send sound, but since we insert locally maybe? No, let's play send sound here if we want to confirm it's sent.
+          // Wait, playing here confirms delivery.
+          soundManager.playSend();
+          return;
+        }
+
+        // It's from someone else
+        const isMention = newMsg.content.includes(`@${pseudo}`);
+        const isPMChannel = newMsg.channel_name.includes(pseudo); // Asumsi sederhana PM
+        const isAnora = newMsg.user_pseudo.includes('Anora');
+
+        if (newMsg.channel_name === currentChannel) {
+          // Message is in active channel, mark as read immediately
+          markMessagesAsRead(currentChannel, pseudo);
+        } else if (isMention || isPMChannel) {
+          // Not active channel, but it's a mention or PM -> Add to unread
+          setUnreadMentions(prev => {
+            if (!prev.includes(newMsg.channel_name)) return [...prev, newMsg.channel_name];
+            return prev;
+          });
+        }
+
+        // Play sounds
+        if (isAnora) {
+          soundManager.playAnora();
+        } else if (isMention || isPMChannel) {
+          soundManager.playReceivePM();
+        } else {
+          soundManager.playReceiveChannel();
+        }
+      })
+      .subscribe();
+
+    return () => {
+      globalChannel.unsubscribe();
+    };
+  }, [pseudo, currentChannel]);
+
+  // Mark as read when entering a channel
+  useEffect(() => {
+    if (pseudo && currentChannel) {
+      markMessagesAsRead(currentChannel, pseudo);
+      // Hapus dari unreadMentions jika ada
+      setUnreadMentions(prev => prev.filter(c => c !== currentChannel));
+    }
+  }, [currentChannel, pseudo]);
+
+  const addLocalMessage = (content, botName = 'Anora 🤖') => {
+    const localMsg = {
+      id: `local-${Date.now()}-${Math.random()}`,
+      channel_name: currentChannel,
+      user_pseudo: botName,
+      content,
+      is_system_msg: false,
+      created_at: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, localMsg]);
+  };
+
   const changeChannel = (newChannel) => {
     setCurrentChannel(newChannel);
   };
@@ -27,7 +100,7 @@ function App() {
   const openNearbyModal = () => setIsNearbyModalOpen(true);
   const closeNearbyModal = () => setIsNearbyModalOpen(false);
 
-  const { parseCommand } = useCommandParser(currentChannel, changeChannel, openPinModal);
+  const { parseCommand } = useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage);
 
   const handleSendMessage = async (text) => {
     return await parseCommand(text);
@@ -53,6 +126,7 @@ function App() {
         changeChannel={changeChannel} 
         openPinModal={openPinModal}
         openNearbyModal={openNearbyModal}
+        unreadMentions={unreadMentions}
       />
       
       <div className="flex-1 flex flex-col min-w-0 relative">
@@ -64,6 +138,7 @@ function App() {
         <ChatWindow 
           messages={messages} 
           loading={loading} 
+          typingUsers={typingUsers}
         />
         
         <div className="sticky bottom-0 w-full z-10">
@@ -71,6 +146,7 @@ function App() {
           <div className="absolute inset-x-0 bottom-full h-12 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>
           <ChatInput 
             onSendMessage={handleSendMessage} 
+            broadcastTyping={broadcastTyping}
           />
         </div>
       </div>

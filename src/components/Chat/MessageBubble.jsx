@@ -1,5 +1,5 @@
 import React from 'react';
-import { Radio } from 'lucide-react';
+import { Radio, Check, CheckCheck } from 'lucide-react';
 
 export default function MessageBubble({ message, isOwn }) {
   const { user_pseudo, content, created_at, is_system_msg } = message;
@@ -45,11 +45,22 @@ export default function MessageBubble({ message, isOwn }) {
             <div className="absolute inset-0 bg-accent/5 pointer-events-none"></div>
           )}
           
-          <div className="relative z-10 flex items-start">
-            {isBeacon && <Radio size={16} className="text-accent mr-2 mt-0.5 shrink-0" />}
-            <span className={`leading-relaxed ${isBeacon ? 'font-medium' : ''}`}>
-              {isBeacon ? content.replace('[BEACON SIGNAL]:', '').trim() : content}
-            </span>
+          <div className="relative z-10 flex items-end justify-between space-x-3">
+            <div className="flex items-start">
+              {isBeacon && <Radio size={16} className="text-accent mr-2 mt-0.5 shrink-0" />}
+              <span className={`leading-relaxed ${isBeacon ? 'font-medium' : ''}`}>
+                {isBeacon ? content.replace('[BEACON SIGNAL]:', '').trim() : content}
+              </span>
+            </div>
+            {isOwn && (
+              <div className="shrink-0 flex items-center pt-2">
+                {message.is_read ? (
+                  <CheckCheck size={14} className="text-blue-300 drop-shadow-sm" />
+                ) : (
+                  <Check size={14} className="text-white/60" />
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

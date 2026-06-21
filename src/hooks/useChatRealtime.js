@@ -5,6 +5,7 @@ import { fetchMessages } from '../services/dbServices';
 export function useChatRealtime(channel, user, pseudo) {
   const [messages, setMessages] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [typingUsers, setTypingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,22 +16,34 @@ export function useChatRealtime(channel, user, pseudo) {
       setLoading(true);
       const data = await fetchMessages(channel);
       if (mounted) {
-        setMessages(data);
+        const welcomeMsg = {
+          id: `local-welcome-${Date.now()}`,
+          channel_name: channel,
+          user_pseudo: 'Anora 🤖',
+          content: `Selamat datang di channel ${channel}! Ketik /help apabila membutuhkan bantuan.`,
+          is_system_msg: false,
+          created_at: new Date().toISOString()
+        };
+        setMessages([...data, welcomeMsg]);
         setLoading(false);
       }
     };
 
     loadMessages();
 
-    // 1. Subscribe to new messages
+    // 1. Subscribe to new messages & updates (read receipts)
     const messageChannel = supabase.channel(`public:messages:channel=${channel}`)
       .on('postgres_changes', { 
-        event: 'INSERT', 
+        event: '*', 
         schema: 'public', 
         table: 'messages',
         filter: `channel_name=eq.${channel}`
       }, (payload) => {
-        setMessages((prev) => [...prev, payload.new]);
+        if (payload.eventType === 'INSERT') {
+          setMessages((prev) => [...prev, payload.new]);
+        } else if (payload.eventType === 'UPDATE') {
+          setMessages((prev) => prev.map(m => m.id === payload.new.id ? payload.new : m));
+        }
       })
       .subscribe();
 
@@ -50,6 +63,18 @@ export function useChatRealtime(channel, user, pseudo) {
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
         // Optional: you can show a local system message that someone left
+      })
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        const typingUser = payload.payload.user;
+        if (typingUser !== pseudo) {
+          setTypingUsers(prev => {
+            if (!prev.includes(typingUser)) return [...prev, typingUser];
+            return prev;
+          });
+          setTimeout(() => {
+            setTypingUsers(prev => prev.filter(u => u !== typingUser));
+          }, 3000);
+        }
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED' && user) {
@@ -79,6 +104,8 @@ export function useChatRealtime(channel, user, pseudo) {
         }
       });
 
+    // Return functions to be bound to ref or passed directly, wait, better to return from hook
+
     return () => {
       mounted = false;
       messageChannel.unsubscribe();
@@ -86,5 +113,13 @@ export function useChatRealtime(channel, user, pseudo) {
     };
   }, [channel, user, pseudo]);
 
-  return { messages, onlineUsers, loading };
+  const broadcastTyping = () => {
+    supabase.channel(`presence:${channel}`).send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { user: pseudo }
+    });
+  };
+
+  return { messages, onlineUsers, typingUsers, loading, setMessages, broadcastTyping };
 }
