@@ -121,11 +121,12 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
         await sendMessage(currentChannel, pseudo, "/help"); // Menampilkan command yang diketik user
         setTimeout(() => {
           const helpText = `Hai! Saya Anora 🤖. Berikut perintah yang bisa kamu gunakan:
-  /join [channel] - Pindah/masuk ke chat room
-  /nick [name] [password] - Ganti nickname kamu (sertakan password jika terdaftar)
-  /register [nick] [pass] [email] - Daftarkan nickname kamu
-  /beacon [message] - Kirim sinyal beacon
-  /addfriend [PIN] - Tambah teman dengan PIN (kosongkan untuk buat PIN)`;
+
+1. /join [channel] - Pindah/masuk ke chat room
+2. /nick [name] [password] - Ganti nickname kamu (sertakan password jika terdaftar)
+3. /register [nick] [pass] [email] - Daftarkan nickname kamu
+4. /beacon [message] - Kirim sinyal beacon
+5. /addfriend [PIN] - Tambah teman dengan PIN (kosongkan untuk buat PIN)`;
           
           addLocalMessage(helpText);
         }, 500);

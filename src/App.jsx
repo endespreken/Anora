@@ -16,6 +16,7 @@ function App() {
   const [currentChannel, setCurrentChannel] = useState('general');
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isNearbyModalOpen, setIsNearbyModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [unreadMentions, setUnreadMentions] = useState([]);
   const { user, pseudo } = useAuth();
   
@@ -92,6 +93,7 @@ function App() {
 
   const changeChannel = (newChannel) => {
     setCurrentChannel(newChannel);
+    setIsMobileMenuOpen(false); // Auto close menu on mobile
   };
 
   const openPinModal = () => setIsPinModalOpen(true);
@@ -99,6 +101,12 @@ function App() {
 
   const openNearbyModal = () => setIsNearbyModalOpen(true);
   const closeNearbyModal = () => setIsNearbyModalOpen(false);
+
+  const startPrivateMessage = (targetPseudo) => {
+    if (targetPseudo === pseudo) return;
+    const pmChannel = `@${[pseudo, targetPseudo].sort().join('-')}`;
+    changeChannel(pmChannel);
+  };
 
   const { parseCommand } = useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage);
 
@@ -120,19 +128,31 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-background text-text overflow-hidden transition-colors duration-300">
+    <div className="flex h-[100dvh] w-full bg-background text-text overflow-hidden transition-colors duration-300">
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden animate-fade-in"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       <Sidebar 
         currentChannel={currentChannel} 
         changeChannel={changeChannel} 
         openPinModal={openPinModal}
         openNearbyModal={openNearbyModal}
         unreadMentions={unreadMentions}
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
       />
       
       <div className="flex-1 flex flex-col min-w-0 relative">
         <Header 
           currentChannel={currentChannel} 
-          onlineCount={onlineUsers.length} 
+          onlineUsers={onlineUsers}
+          onMenuClick={() => setIsMobileMenuOpen(true)}
+          onUserClick={startPrivateMessage}
         />
         
         <ChatWindow 

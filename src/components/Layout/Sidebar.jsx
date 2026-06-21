@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Hash, Radar, UserPlus, Zap, MapPin } from 'lucide-react';
+import { Hash, Radar, UserPlus, Zap, MapPin, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchFriends } from '../../services/dbServices';
 
-export default function Sidebar({ currentChannel, changeChannel, openPinModal, openNearbyModal, unreadMentions = [] }) {
+export default function Sidebar({ currentChannel, changeChannel, openPinModal, openNearbyModal, unreadMentions = [], isOpen, onClose }) {
   const { user } = useAuth();
   const [friends, setFriends] = useState([]);
   
@@ -20,12 +20,25 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
   }, [user]);
 
   return (
-    <div className="w-72 glass-panel h-full flex flex-col z-10 animate-fade-in border-r border-border border-y-0 border-l-0">
-      <div className="p-6 border-b border-border flex items-center space-x-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
-          <Zap size={20} className="text-white" />
+    <div className={`
+      fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out
+      ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      md:relative md:translate-x-0
+      w-72 glass-panel h-[100dvh] flex flex-col border-r border-border border-y-0 border-l-0
+    `}>
+      <div className="p-6 border-b border-border flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
+            <Zap size={20} className="text-white" />
+          </div>
+          <h1 className="font-bold text-2xl tracking-tight text-text">Anora</h1>
         </div>
-        <h1 className="font-bold text-2xl tracking-tight text-text">Anora</h1>
+        <button 
+          onClick={onClose} 
+          className="md:hidden p-2 text-textMuted hover:text-text hover:bg-secondary/50 rounded-lg transition-colors"
+        >
+          <X size={20} />
+        </button>
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 space-y-8">

@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.43.0",
+    "emoji-picker-react": "^4.19.1",
     "lucide-react": "^0.370.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-easy-emoji": "^1.8.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",

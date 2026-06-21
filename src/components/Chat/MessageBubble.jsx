@@ -1,5 +1,6 @@
 import React from 'react';
 import { Radio, Check, CheckCheck } from 'lucide-react';
+import emoji from 'react-easy-emoji';
 
 export default function MessageBubble({ message, isOwn }) {
   const { user_pseudo, content, created_at, is_system_msg } = message;
@@ -9,7 +10,7 @@ export default function MessageBubble({ message, isOwn }) {
     return (
       <div className="flex justify-center my-6 animate-fade-in">
         <span className="text-xs font-medium text-textMuted bg-secondary/30 backdrop-blur-sm border border-border px-4 py-1.5 rounded-full shadow-sm">
-          {content}
+          {emoji(content)}
         </span>
       </div>
     );
@@ -48,8 +49,8 @@ export default function MessageBubble({ message, isOwn }) {
           <div className="relative z-10 flex items-end justify-between space-x-3">
             <div className="flex items-start">
               {isBeacon && <Radio size={16} className="text-accent mr-2 mt-0.5 shrink-0" />}
-              <span className={`leading-relaxed ${isBeacon ? 'font-medium' : ''}`}>
-                {isBeacon ? content.replace('[BEACON SIGNAL]:', '').trim() : content}
+              <span className={`leading-relaxed whitespace-pre-wrap ${isBeacon ? 'font-medium' : ''}`}>
+                {isBeacon ? emoji(content.replace('[BEACON SIGNAL]:', '').trim()) : emoji(content)}
               </span>
             </div>
             {isOwn && (

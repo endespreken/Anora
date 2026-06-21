@@ -21,7 +21,8 @@ export function AuthProvider({ children }) {
           console.error("Error signing in anonymously:", error);
           // If anonymous sign-in fails (e.g. not enabled in Supabase or placeholder used),
           // we fallback to a mock user so the UI can still be previewed.
-          setUser({ id: 'mock-user-id-' + Math.random().toString(36).substr(2, 9) });
+          const fallbackId = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : '00000000-0000-0000-0000-000000000000';
+          setUser({ id: fallbackId });
         } else {
           setUser(data.user);
         }
