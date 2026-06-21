@@ -53,19 +53,19 @@ export default function Header({ currentChannel, onlineUsers = [], onMenuClick, 
                     <button 
                       onClick={() => {
                         setShowMembers(false);
-                        if (u.user !== pseudo) {
-                          onUserClick(u.user);
+                        if (u.pseudo !== pseudo) {
+                          onUserClick(u.pseudo);
                         }
                       }}
                       className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-secondary/40 transition-colors text-left group"
                     >
                       <div className="flex items-center">
                         <span className="w-2 h-2 rounded-full bg-green-400 mr-3 shadow-[0_0_8px_rgba(74,222,128,0.5)]"></span>
-                        <span className={`text-sm ${u.user === pseudo ? 'font-semibold text-text' : 'text-textMuted group-hover:text-text'}`}>
-                          {u.user} {u.user === pseudo && '(You)'}
+                        <span className={`text-sm ${u.pseudo === pseudo ? 'font-semibold text-text' : 'text-textMuted group-hover:text-text'}`}>
+                          {u.pseudo} {u.pseudo === pseudo && '(You)'}
                         </span>
                       </div>
-                      {u.user !== pseudo && (
+                      {u.pseudo !== pseudo && (
                         <MessageCircle size={14} className="text-textMuted opacity-0 group-hover:opacity-100 transition-opacity" />
                       )}
                     </button>
