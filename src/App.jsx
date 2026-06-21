@@ -11,6 +11,7 @@ import { useAuth } from './contexts/AuthContext';
 import { supabase } from './config/supabaseClient';
 import { soundManager } from './utils/SoundManager';
 import { markMessagesAsRead } from './services/dbServices';
+import Home from './components/Home/Home';
 
 function App() {
   const [currentChannel, setCurrentChannel] = useState('general');
@@ -18,6 +19,7 @@ function App() {
   const [isNearbyModalOpen, setIsNearbyModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [unreadMentions, setUnreadMentions] = useState([]);
+  const [hasJoined, setHasJoined] = useState(false);
   const { user, pseudo } = useAuth();
   
   const { messages, onlineUsers, typingUsers, loading, setMessages, broadcastTyping } = useChatRealtime(currentChannel, user, pseudo);
@@ -125,6 +127,10 @@ function App() {
         </div>
       </div>
     );
+  }
+
+  if (!hasJoined) {
+    return <Home onJoin={() => setHasJoined(true)} />;
   }
 
   return (
