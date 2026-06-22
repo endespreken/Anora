@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Hash, Radar, UserPlus, Zap, MapPin, X, Lock, Pin } from 'lucide-react';
+import { Hash, Radar, UserPlus, Zap, MapPin, X, Lock, Pin, MessageCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchFriends } from '../../services/dbServices';
 
@@ -144,14 +144,19 @@ export default function Sidebar({
 
         {/* PMs */}
         <div className={activeMobileTab === 'pms' ? 'block' : 'hidden md:block'}>
-          {privateChannels.length > 0 && (
-            <h2 className="hidden md:block text-xs font-bold uppercase tracking-wider text-textMuted mb-3 px-2">
-              Private Messages
-            </h2>
-          )}
+          <h2 className="hidden md:block text-xs font-bold uppercase tracking-wider text-textMuted mb-3 px-2">
+            Private Messages
+          </h2>
           {privateChannels.length === 0 && (
-            <div className="md:hidden px-3 py-4 text-sm text-textMuted text-center bg-secondary/30 rounded-xl border border-dashed border-border mt-2">
-              Belum ada obrolan private.
+            <div className="px-4 py-6 text-center bg-secondary/30 rounded-2xl border border-dashed border-border mt-2 flex flex-col items-center mx-2 animate-fade-in">
+              <MessageCircle size={32} className="text-textMuted mb-3 opacity-50" />
+              <p className="text-sm text-textMuted mb-4">Belum ada obrolan private.</p>
+              <button 
+                onClick={openNearbyModal} 
+                className="px-4 py-2.5 bg-gradient-to-r from-primary to-accent text-white font-bold rounded-xl text-xs hover:opacity-90 transition-opacity shadow-lg shadow-primary/30 w-full"
+              >
+                Cari Teman Sekitar
+              </button>
             </div>
           )}
           {privateChannels.length > 0 && (

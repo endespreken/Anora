@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { X, MapPin } from 'lucide-react';
+import { X, MapPin, MessageCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { calculateDistance, formatDistance } from '../../utils/geo';
 
-export default function NearbyUsersModal({ isOpen, onClose, onlineUsers }) {
+export default function NearbyUsersModal({ isOpen, onClose, onlineUsers, onUserClick }) {
   const { user } = useAuth();
 
   const nearbyUsers = useMemo(() => {
@@ -75,25 +75,40 @@ export default function NearbyUsersModal({ isOpen, onClose, onlineUsers }) {
           ) : (
             <ul className="space-y-3">
               {nearbyUsers.map(u => (
-                <li key={u.user_id} className="bg-secondary/10 border border-border rounded-xl p-4 flex items-center justify-between hover:bg-secondary/20 transition-colors">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-border flex items-center justify-center font-bold text-textMuted shadow-inner">
-                      {u.pseudo ? u.pseudo.charAt(0).toUpperCase() : '?'}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-text">{u.pseudo}</div>
-                      <div className="text-xs text-green-400 flex items-center">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 mr-1.5 shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
-                        Online
+                <li key={u.user_id}>
+                  <button 
+                    onClick={() => {
+                      if (onUserClick) {
+                        onUserClick(u.pseudo);
+                        onClose();
+                      }
+                    }}
+                    className="w-full text-left bg-secondary/10 border border-border rounded-xl p-4 flex items-center justify-between hover:bg-secondary/30 transition-colors group"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-border flex items-center justify-center font-bold text-textMuted shadow-inner group-hover:text-text transition-colors">
+                        {u.pseudo ? u.pseudo.charAt(0).toUpperCase() : '?'}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-text group-hover:text-primary transition-colors">{u.pseudo}</div>
+                        <div className="text-xs text-green-400 flex items-center">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-400 mr-1.5 shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
+                          Online
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-bold text-primary">
-                      {formatDistance(u.distance)}
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-primary">
+                          {formatDistance(u.distance)}
+                        </div>
+                        <div className="text-xs text-textMuted">away</div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-secondary/50 group-hover:bg-primary/20 text-textMuted group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100">
+                        <MessageCircle size={18} />
+                      </div>
                     </div>
-                    <div className="text-xs text-textMuted">away</div>
-                  </div>
+                  </button>
                 </li>
               ))}
             </ul>

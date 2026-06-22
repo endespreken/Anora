@@ -30,6 +30,34 @@ export const fetchMessages = async (channel, limit = 50) => {
   return data.reverse();
 };
 
+export const fetchUnreadCountsForUser = async (channels, pseudo) => {
+  const counts = {};
+  if (!channels || channels.length === 0) return counts;
+
+  const { data, error } = await supabase
+    .from('messages')
+    .select('channel_name, created_at')
+    .in('channel_name', channels)
+    .neq('user_pseudo', pseudo);
+
+  if (error) {
+    console.error("Error fetching unread counts:", error);
+    return counts;
+  }
+
+  data.forEach(msg => {
+    const channel = msg.channel_name;
+    const lastRead = parseInt(localStorage.getItem(`last_read_${pseudo}_${channel}`) || '0', 10);
+    const msgTime = new Date(msg.created_at).getTime();
+
+    if (msgTime > lastRead) {
+      counts[channel] = (counts[channel] || 0) + 1;
+    }
+  });
+
+  return counts;
+};
+
 export const generatePin = async (userId) => {
   const pin = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit PIN
   const expiresAt = new Date(Date.now() + 5 * 60000); // 5 minutes from now

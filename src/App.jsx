@@ -6,18 +6,20 @@ import ChatWindow from './components/Chat/ChatWindow';
 import ChatInput from './components/Chat/ChatInput';
 import PinGeneratorModal from './components/Modals/PinGeneratorModal';
 import NearbyUsersModal from './components/Modals/NearbyUsersModal';
+import OnlineUsersModal from './components/Modals/OnlineUsersModal';
 import { useChatRealtime } from './hooks/useChatRealtime';
 import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './config/supabaseClient';
 import { soundManager } from './utils/SoundManager';
-import { markMessagesAsRead, sendMessage } from './services/dbServices';
+import { markMessagesAsRead, sendMessage, fetchUnreadCountsForUser } from './services/dbServices';
 import Home from './components/Home/Home';
 
 function App() {
   const [currentChannel, setCurrentChannel] = useState('random');
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isNearbyModalOpen, setIsNearbyModalOpen] = useState(false);
+  const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState('pms');
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState({});
@@ -90,6 +92,17 @@ function App() {
       }
     }
   }, [currentChannel, privateChannels, joinedSpaces]);
+
+  // Load persistent unread counts
+  useEffect(() => {
+    if (!pseudo) return;
+    const allChannels = [...new Set([...joinedSpaces, ...privateChannels])];
+    if (allChannels.length === 0) return;
+    
+    fetchUnreadCountsForUser(allChannels, pseudo).then(counts => {
+      setUnreadCounts(prev => ({ ...prev, ...counts }));
+    });
+  }, [pseudo, joinedSpaces, privateChannels]);
 
   useEffect(() => {
     if (hasJoined && pseudo && !isRegistered) {
@@ -176,6 +189,7 @@ function App() {
         if (newMsg.channel_name === currentChannel) {
           // Message is in active channel, mark as read immediately
           markMessagesAsRead(currentChannel, pseudo);
+          localStorage.setItem(`last_read_${pseudo}_${currentChannel}`, Date.now().toString());
         } else if (isMention || isPMChannel) {
           // Not active channel, but it's a mention or PM -> Add to unread
           setUnreadCounts(prev => ({
@@ -239,6 +253,7 @@ function App() {
   useEffect(() => {
     if (pseudo && currentChannel) {
       markMessagesAsRead(currentChannel, pseudo);
+      localStorage.setItem(`last_read_${pseudo}_${currentChannel}`, Date.now().toString());
       // Hapus dari unreadCounts jika ada
       setUnreadCounts(prev => {
         const next = { ...prev };
@@ -251,6 +266,7 @@ function App() {
   const handleMarkAsRead = (channelToMark) => {
     if (pseudo) {
       markMessagesAsRead(channelToMark, pseudo);
+      localStorage.setItem(`last_read_${pseudo}_${channelToMark}`, Date.now().toString());
       setUnreadCounts(prev => {
         const next = { ...prev };
         delete next[channelToMark];
@@ -368,6 +384,7 @@ function App() {
           isMobileChatOpen={isMobileChatOpen}
           onBack={() => setIsMobileChatOpen(false)}
           onUserClick={startPrivateMessage}
+          onShowMembers={() => setIsOnlineModalOpen(true)}
         />
         
         <ChatWindow 
@@ -398,6 +415,14 @@ function App() {
         isOpen={isNearbyModalOpen}
         onClose={closeNearbyModal}
         onlineUsers={onlineUsers}
+        onUserClick={startPrivateMessage}
+      />
+
+      <OnlineUsersModal
+        isOpen={isOnlineModalOpen}
+        onClose={() => setIsOnlineModalOpen(false)}
+        onlineUsers={onlineUsers}
+        onUserClick={startPrivateMessage}
       />
     </div>
   );
