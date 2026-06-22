@@ -3,7 +3,7 @@ import { Hash, Radar, UserPlus, Zap, MapPin, X, Lock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchFriends } from '../../services/dbServices';
 
-export default function Sidebar({ currentChannel, changeChannel, openPinModal, openNearbyModal, unreadMentions = [], privateChannels = [], closePrivateChannel, joinedSpaces = ['random'], closeSpace, activeMobileTab = 'pms' }) {
+export default function Sidebar({ currentChannel, changeChannel, openPinModal, openNearbyModal, unreadCounts = {}, privateChannels = [], closePrivateChannel, joinedSpaces = ['random'], closeSpace, activeMobileTab = 'pms' }) {
   const { user, pseudo } = useAuth();
   const [friends, setFriends] = useState([]);
 
@@ -38,13 +38,14 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
           <ul className="space-y-1">
             {joinedSpaces.map(channel => {
               const isActive = currentChannel === channel;
-              const isUnread = unreadMentions.includes(channel);
+              const unreadCount = unreadCounts[channel] || 0;
+              const isUnread = unreadCount > 0;
               
               return (
                 <li key={channel} className="group relative">
                   <button 
                     onClick={() => changeChannel(channel)}
-                    className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 ${
                       isActive 
                       ? 'bg-primary/10 text-primary font-semibold shadow-sm' 
                       : isUnread 
@@ -52,8 +53,15 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
                         : 'text-textMuted hover:bg-secondary/50 hover:text-text'
                     }`}
                   >
-                    <Hash size={18} className={`mr-3 ${isActive ? 'text-primary' : 'text-textMuted'}`} /> 
-                    <span className="capitalize">{channel}</span>
+                    <div className="flex items-center">
+                      <Hash size={18} className={`mr-3 ${isActive ? 'text-primary' : 'text-textMuted'}`} /> 
+                      <span className="capitalize">{channel}</span>
+                    </div>
+                    {isUnread && (
+                      <span className="bg-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-sm">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                   </button>
                   {channel !== 'random' && (
                     <button
@@ -89,7 +97,8 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
             <ul className="space-y-1">
               {privateChannels.map(channel => {
                 const isActive = currentChannel === channel;
-                const isUnread = unreadMentions.includes(channel);
+                const unreadCount = unreadCounts[channel] || 0;
+                const isUnread = unreadCount > 0;
                 
                 const parts = channel.replace('@', '').split('-');
                 const targetUser = parts.find(p => p !== pseudo) || parts[0];
@@ -98,7 +107,7 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
                   <li key={channel} className="group relative">
                     <button 
                       onClick={() => changeChannel(channel)}
-                      className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 ${
                         isActive 
                         ? 'bg-primary/10 text-primary font-semibold shadow-sm' 
                         : isUnread 
@@ -106,8 +115,15 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
                           : 'text-textMuted hover:bg-secondary/50 hover:text-text'
                       }`}
                     >
-                      <Lock size={16} className={`mr-3 ${isActive ? 'text-primary' : 'text-textMuted'}`} /> 
-                      <span className="capitalize">{targetUser}</span>
+                      <div className="flex items-center">
+                        <Lock size={16} className={`mr-3 ${isActive ? 'text-primary' : 'text-textMuted'}`} /> 
+                        <span className="capitalize">{targetUser}</span>
+                      </div>
+                      {isUnread && (
+                        <span className="bg-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-sm">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
                     </button>
                     <button
                       onClick={(e) => {

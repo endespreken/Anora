@@ -6,7 +6,9 @@ import ChatWindow from './components/Chat/ChatWindow';
 import ChatInput from './components/Chat/ChatInput';
 import PinGeneratorModal from './components/Modals/PinGeneratorModal';
 import NearbyUsersModal from './components/Modals/NearbyUsersModal';
+import CallModal from './components/Modals/CallModal';
 import { useChatRealtime } from './hooks/useChatRealtime';
+import { useWebRTC } from './hooks/useWebRTC';
 import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './config/supabaseClient';
@@ -20,13 +22,26 @@ function App() {
   const [isNearbyModalOpen, setIsNearbyModalOpen] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState('pms');
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
-  const [unreadMentions, setUnreadMentions] = useState([]);
+  const [unreadCounts, setUnreadCounts] = useState({});
   const [hasJoined, setHasJoined] = useState(false);
   const { user, pseudo, isRegistered } = useAuth();
   const [privateChannels, setPrivateChannels] = useState([]);
   const [joinedSpaces, setJoinedSpaces] = useState(['random']);
   const [replyingTo, setReplyingTo] = useState(null);
   
+  const {
+    callState,
+    caller,
+    callTarget,
+    localStream,
+    remoteStream,
+    isMuted,
+    startCall,
+    acceptCall,
+    endCall,
+    toggleMute
+  } = useWebRTC(pseudo);
+
   // Load channels when pseudo changes
   useEffect(() => {
     if (pseudo) {
@@ -158,10 +173,10 @@ function App() {
           markMessagesAsRead(currentChannel, pseudo);
         } else if (isMention || isPMChannel) {
           // Not active channel, but it's a mention or PM -> Add to unread
-          setUnreadMentions(prev => {
-            if (!prev.includes(newMsg.channel_name)) return [...prev, newMsg.channel_name];
-            return prev;
-          });
+          setUnreadCounts(prev => ({
+            ...prev,
+            [newMsg.channel_name]: (prev[newMsg.channel_name] || 0) + 1
+          }));
           
           if (isPMChannel && newMsg.channel_name.startsWith('@')) {
             updatePrivateChannels(prev => {
@@ -191,8 +206,12 @@ function App() {
   useEffect(() => {
     if (pseudo && currentChannel) {
       markMessagesAsRead(currentChannel, pseudo);
-      // Hapus dari unreadMentions jika ada
-      setUnreadMentions(prev => prev.filter(c => c !== currentChannel));
+      // Hapus dari unreadCounts jika ada
+      setUnreadCounts(prev => {
+        const next = { ...prev };
+        delete next[currentChannel];
+        return next;
+      });
     }
   }, [currentChannel, pseudo]);
 
@@ -262,7 +281,7 @@ function App() {
           changeChannel={changeChannel} 
           openPinModal={openPinModal}
           openNearbyModal={openNearbyModal}
-          unreadMentions={unreadMentions}
+          unreadCounts={unreadCounts}
           privateChannels={privateChannels}
           closePrivateChannel={closePrivateChannel}
           joinedSpaces={joinedSpaces}
@@ -276,8 +295,8 @@ function App() {
           activeTab={activeMobileTab} 
           onChangeTab={setActiveMobileTab} 
           unreadTabs={['spaces', 'pms'].filter(tab => {
-            if (tab === 'pms') return unreadMentions.some(m => m.startsWith('@'));
-            if (tab === 'spaces') return unreadMentions.some(m => !m.startsWith('@'));
+            if (tab === 'pms') return Object.keys(unreadCounts).some(c => c.startsWith('@') && unreadCounts[c] > 0);
+            if (tab === 'spaces') return Object.keys(unreadCounts).some(c => !c.startsWith('@') && unreadCounts[c] > 0);
             return false;
           })} 
         />
@@ -290,6 +309,7 @@ function App() {
           isMobileChatOpen={isMobileChatOpen}
           onBack={() => setIsMobileChatOpen(false)}
           onUserClick={startPrivateMessage}
+          onCallClick={startCall}
         />
         
         <ChatWindow 
@@ -320,6 +340,17 @@ function App() {
         isOpen={isNearbyModalOpen}
         onClose={closeNearbyModal}
         onlineUsers={onlineUsers}
+      />
+
+      <CallModal
+        callState={callState}
+        caller={caller}
+        callTarget={callTarget}
+        remoteStream={remoteStream}
+        isMuted={isMuted}
+        acceptCall={acceptCall}
+        endCall={endCall}
+        toggleMute={toggleMute}
       />
     </div>
   );
