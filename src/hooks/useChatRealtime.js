@@ -4,7 +4,6 @@ import { fetchMessages } from '../services/dbServices';
 
 export function useChatRealtime(channel, user, pseudo) {
   const [messages, setMessages] = useState([]);
-  const [onlineUsers, setOnlineUsers] = useState([]);
   const [typingUsers, setTypingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,23 +55,11 @@ export function useChatRealtime(channel, user, pseudo) {
       })
       .subscribe();
 
-    // 2. Subscribe to presence
+    // 2. Subscribe to typing broadcasts using a dedicated channel or presence
+    // We can just use a channel without tracking presence
     const presenceChannel = supabase.channel(`presence:${channel}`);
     
     presenceChannel
-      .on('presence', { event: 'sync' }, () => {
-        const state = presenceChannel.presenceState();
-        const users = Object.values(state).flatMap(users => users);
-        // Deduplicate by user_id
-        const uniqueUsers = Array.from(new Map(users.map(u => [u.user_id, u])).values());
-        setOnlineUsers(uniqueUsers); 
-      })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        // Optional: you can show a local system message that someone joined
-      })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        // Optional: you can show a local system message that someone left
-      })
       .on('broadcast', { event: 'typing' }, (payload) => {
         const typingUser = payload.payload.user;
         if (typingUser !== pseudo) {
@@ -85,35 +72,7 @@ export function useChatRealtime(channel, user, pseudo) {
           }, 3000);
         }
       })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED' && user) {
-          const trackPresence = async (lat = null, lng = null) => {
-            await presenceChannel.track({
-              user_id: user.id,
-              pseudo: pseudo,
-              online_at: new Date().toISOString(),
-              lat: lat,
-              lng: lng,
-            });
-          };
-
-          if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-              (position) => {
-                trackPresence(position.coords.latitude, position.coords.longitude);
-              },
-              (error) => {
-                console.error("Geolocation error:", error);
-                trackPresence();
-              }
-            );
-          } else {
-             trackPresence();
-          }
-        }
-      });
-
-    // Return functions to be bound to ref or passed directly, wait, better to return from hook
+      .subscribe();
 
     return () => {
       mounted = false;
@@ -130,5 +89,5 @@ export function useChatRealtime(channel, user, pseudo) {
     });
   };
 
-  return { messages, onlineUsers, typingUsers, loading, setMessages, broadcastTyping };
+  return { messages, typingUsers, loading, setMessages, broadcastTyping };
 }

@@ -13,6 +13,7 @@ import { useAuth } from './contexts/AuthContext';
 import { supabase } from './config/supabaseClient';
 import { soundManager } from './utils/SoundManager';
 import { markMessagesAsRead, sendMessage, fetchUnreadCountsForUser } from './services/dbServices';
+import { useGlobalPresence } from './hooks/useGlobalPresence';
 import Home from './components/Home/Home';
 
 function App() {
@@ -79,7 +80,17 @@ function App() {
     });
   };
   
-  const { messages, onlineUsers, typingUsers, loading, setMessages, broadcastTyping } = useChatRealtime(currentChannel, user, pseudo);
+  const { messages, typingUsers, loading, setMessages, broadcastTyping } = useChatRealtime(currentChannel, user, pseudo);
+
+  // Global Presence
+  const { globalOnlineUsers } = useGlobalPresence(user, pseudo, joinedSpaces, privateChannels);
+  
+  // Filter online users for current room
+  const onlineUsers = globalOnlineUsers.filter(u => {
+    if (currentChannel === 'random') return true; // random is global
+    if (currentChannel.startsWith('@')) return currentChannel.includes(u.pseudo);
+    return u.spaces?.includes(currentChannel);
+  });
 
   useEffect(() => {
     if (currentChannel.startsWith('@')) {
@@ -365,6 +376,7 @@ function App() {
           pinnedChannels={pinnedChannels}
           onPinChat={handlePinChat}
           globalTyping={globalTyping}
+          globalOnlineUsers={globalOnlineUsers}
         />
         <BottomNav 
           activeTab={activeMobileTab} 
@@ -414,7 +426,7 @@ function App() {
       <NearbyUsersModal
         isOpen={isNearbyModalOpen}
         onClose={closeNearbyModal}
-        onlineUsers={onlineUsers}
+        onlineUsers={globalOnlineUsers}
         onUserClick={startPrivateMessage}
       />
 

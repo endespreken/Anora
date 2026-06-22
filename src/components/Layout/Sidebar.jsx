@@ -7,7 +7,8 @@ export default function Sidebar({
   currentChannel, changeChannel, openPinModal, openNearbyModal, 
   unreadCounts = {}, privateChannels = [], closePrivateChannel, 
   joinedSpaces = ['random'], closeSpace, activeMobileTab = 'pms', 
-  onMarkAsRead, pinnedChannels = [], onPinChat, globalTyping = {} 
+  onMarkAsRead, pinnedChannels = [], onPinChat, globalTyping = {},
+  globalOnlineUsers = []
 }) {
   const { user, pseudo } = useAuth();
   const [friends, setFriends] = useState([]);
@@ -115,6 +116,10 @@ export default function Sidebar({
                       <div className="flex items-center w-full">
                         <span className="capitalize truncate">{channel}</span>
                         {isPinned && <Pin size={12} className="ml-1.5 text-primary flex-shrink-0" />}
+                        <div className="ml-auto flex items-center space-x-1 pl-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]"></span>
+                          <span className="text-[10px] font-medium opacity-80">{channel === 'random' ? globalOnlineUsers.length : globalOnlineUsers.filter(u => u.spaces?.includes(channel)).length}</span>
+                        </div>
                       </div>
                       {isTyping && <span className="text-[10px] text-green-500 font-medium animate-pulse mt-0.5">Typing...</span>}
                     </div>
