@@ -5,7 +5,18 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [pseudo, setPseudo] = useState('Anon' + Math.floor(Math.random() * 10000));
+  const [pseudo, setPseudo] = useState(() => {
+    const saved = localStorage.getItem('anora_pseudo');
+    const savedTime = localStorage.getItem('anora_pseudo_time');
+    const now = Date.now();
+    if (saved && savedTime && now - parseInt(savedTime) < 24 * 60 * 60 * 1000) {
+      return saved;
+    }
+    const newPseudo = 'Anon' + Math.floor(Math.random() * 10000);
+    localStorage.setItem('anora_pseudo', newPseudo);
+    localStorage.setItem('anora_pseudo_time', now.toString());
+    return newPseudo;
+  });
   const [isRegistered, setIsRegistered] = useState(false);
   const [loading, setLoading] = useState(true);
   const timerRef = React.useRef(null);
@@ -51,14 +62,10 @@ export function AuthProvider({ children }) {
     setPseudo(newPseudo);
     setIsRegistered(registered);
     
-    if (timerRef.current) clearTimeout(timerRef.current);
+    localStorage.setItem('anora_pseudo', newPseudo);
+    localStorage.setItem('anora_pseudo_time', Date.now().toString());
     
-    if (!registered) {
-      timerRef.current = setTimeout(() => {
-        setPseudo('Anon' + Math.floor(Math.random() * 10000));
-        setIsRegistered(false);
-      }, 5 * 60 * 1000); // 5 minutes
-    }
+    if (timerRef.current) clearTimeout(timerRef.current);
   };
 
   const markAsRegistered = () => {

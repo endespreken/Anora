@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
+import BottomNav from './components/Layout/BottomNav';
 import ChatWindow from './components/Chat/ChatWindow';
 import ChatInput from './components/Chat/ChatInput';
 import PinGeneratorModal from './components/Modals/PinGeneratorModal';
@@ -10,32 +11,36 @@ import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './config/supabaseClient';
 import { soundManager } from './utils/SoundManager';
-import { markMessagesAsRead } from './services/dbServices';
+import { markMessagesAsRead, sendMessage } from './services/dbServices';
 import Home from './components/Home/Home';
 
 function App() {
-  const [currentChannel, setCurrentChannel] = useState('general');
+  const [currentChannel, setCurrentChannel] = useState('random');
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isNearbyModalOpen, setIsNearbyModalOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeMobileTab, setActiveMobileTab] = useState('pms');
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [unreadMentions, setUnreadMentions] = useState([]);
   const [hasJoined, setHasJoined] = useState(false);
-  const { user, pseudo } = useAuth();
+  const { user, pseudo, isRegistered } = useAuth();
   const [privateChannels, setPrivateChannels] = useState([]);
+  const [joinedSpaces, setJoinedSpaces] = useState(['random']);
+  const [replyingTo, setReplyingTo] = useState(null);
   
-  // Load private channels when pseudo changes
+  // Load channels when pseudo changes
   useEffect(() => {
     if (pseudo) {
-      const saved = localStorage.getItem(`anora_pm_${pseudo}`);
-      if (saved) {
-        setPrivateChannels(JSON.parse(saved));
-      } else {
-        setPrivateChannels([]);
-      }
+      const savedPM = localStorage.getItem(`anora_pm_${pseudo}`);
+      if (savedPM) setPrivateChannels(JSON.parse(savedPM));
+      else setPrivateChannels([]);
+
+      const savedSpaces = localStorage.getItem(`anora_spaces_${pseudo}`);
+      if (savedSpaces) setJoinedSpaces(JSON.parse(savedSpaces));
+      else setJoinedSpaces(['random']);
     }
   }, [pseudo]);
 
-  // Wrapper to save to localStorage safely
+  // Wrappers to save to localStorage safely
   const updatePrivateChannels = (updater) => {
     setPrivateChannels(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
@@ -43,19 +48,87 @@ function App() {
       return next;
     });
   };
+
+  const updateJoinedSpaces = (updater) => {
+    setJoinedSpaces(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (pseudo) localStorage.setItem(`anora_spaces_${pseudo}`, JSON.stringify(next));
+      return next;
+    });
+  };
   
   const { messages, onlineUsers, typingUsers, loading, setMessages, broadcastTyping } = useChatRealtime(currentChannel, user, pseudo);
 
   useEffect(() => {
-    if (currentChannel.startsWith('@') && !privateChannels.includes(currentChannel)) {
-      updatePrivateChannels(prev => [...prev, currentChannel]);
+    if (currentChannel.startsWith('@')) {
+      if (!privateChannels.includes(currentChannel)) {
+        updatePrivateChannels(prev => [...prev, currentChannel]);
+      }
+    } else {
+      if (!joinedSpaces.includes(currentChannel)) {
+        updateJoinedSpaces(prev => [...prev, currentChannel]);
+      }
     }
-  }, [currentChannel, privateChannels]);
+  }, [currentChannel, privateChannels, joinedSpaces]);
+
+  useEffect(() => {
+    if (hasJoined && pseudo && !isRegistered) {
+      const pmSent = localStorage.getItem(`anora_welcome_pm_${pseudo}`);
+      if (!pmSent) {
+        const pmChannel = `@${[pseudo, 'Anora 🤖'].sort().join('-')}`;
+        const messageContent = `selamat datang di Anora, Chat Anonim Random\n\nBerikut perintah yang bisa kamu gunakan:\n1. /join [channel] - Pindah/masuk ke chat room\n2. /nick [name] [password] - Ganti nickname kamu\n3. /register [nick] [pass] [email] - Daftarkan nickname kamu\n4. /beacon [message] - Kirim sinyal beacon\n5. /addfriend [PIN] - Tambah teman dengan PIN\n\njika kamu perlu bantuan, silahkan chat Anora yah`;
+        
+        updatePrivateChannels(prev => {
+          if (!prev.includes(pmChannel)) return [...prev, pmChannel];
+          return prev;
+        });
+
+        sendMessage(pmChannel, 'Anora 🤖', messageContent);
+
+        localStorage.setItem(`anora_welcome_pm_${pseudo}`, 'true');
+      }
+    }
+  }, [hasJoined, pseudo, isRegistered]);
+
+  // 1-hour Anonymous Suggestion
+  useEffect(() => {
+    if (!hasJoined || !user || isRegistered) return;
+
+    const startKey = `anon_start_time_${user.id}`;
+    const pmSentKey = `anora_register_suggestion_sent_${user.id}`;
+
+    if (!localStorage.getItem(startKey)) {
+      localStorage.setItem(startKey, Date.now().toString());
+    }
+
+    if (localStorage.getItem(pmSentKey)) return;
+
+    const checkInterval = setInterval(() => {
+      const startTime = parseInt(localStorage.getItem(startKey) || '0', 10);
+      const oneHour = 60 * 60 * 1000; // 1 hour in ms
+      
+      if (Date.now() - startTime >= oneHour) {
+        const pmChannel = `@${[pseudo, 'Anora 🤖'].sort().join('-')}`;
+        const messageContent = `Halo! Saya perhatikan kamu sudah mengobrol sebagai anonim selama 1 jam.\n\nAgar lebih seru, yuk register nickname kamu! Dengan register, nickname kamu tidak akan hilang dan kamu bisa menambah teman (Add Connection) ke dalam Friendlist menggunakan PIN.\n\nGunakan perintah ini untuk register:\n/register [nickname] [password] [email]\n\nJika butuh bantuan, ketik /help atau balas pesan ini yah.`;
+        
+        updatePrivateChannels(prev => {
+          if (!prev.includes(pmChannel)) return [...prev, pmChannel];
+          return prev;
+        });
+
+        sendMessage(pmChannel, 'Anora 🤖', messageContent);
+        localStorage.setItem(pmSentKey, 'true');
+        clearInterval(checkInterval);
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(checkInterval);
+  }, [hasJoined, user, isRegistered, pseudo]);
 
   const closePrivateChannel = (channelToClose) => {
     updatePrivateChannels(prev => prev.filter(c => c !== channelToClose));
     if (currentChannel === channelToClose) {
-      setCurrentChannel('general');
+      setCurrentChannel('random');
     }
   };
   
@@ -137,7 +210,8 @@ function App() {
 
   const changeChannel = (newChannel) => {
     setCurrentChannel(newChannel);
-    setIsMobileMenuOpen(false); // Auto close menu on mobile
+    setIsMobileChatOpen(true); // Open chat view on mobile
+    setReplyingTo(null);
   };
 
   const openPinModal = () => setIsPinModalOpen(true);
@@ -155,7 +229,11 @@ function App() {
   const { parseCommand } = useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage);
 
   const handleSendMessage = async (text) => {
-    return await parseCommand(text);
+    const success = await parseCommand(text, replyingTo?.id);
+    if (success) {
+      setReplyingTo(null);
+    }
+    return success;
   };
 
   if (!user) {
@@ -177,31 +255,40 @@ function App() {
 
   return (
     <div className="flex h-[100dvh] w-full bg-background text-text overflow-hidden transition-colors duration-300">
-      {/* Mobile Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden animate-fade-in"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      <Sidebar 
-        currentChannel={currentChannel} 
-        changeChannel={changeChannel} 
-        openPinModal={openPinModal}
-        openNearbyModal={openNearbyModal}
-        unreadMentions={unreadMentions}
-        isOpen={isMobileMenuOpen}
-        onClose={() => setIsMobileMenuOpen(false)}
-        privateChannels={privateChannels}
-        closePrivateChannel={closePrivateChannel}
-      />
       
-      <div className="flex-1 flex flex-col min-w-0 relative">
+      <div className={`${!isMobileChatOpen ? 'flex' : 'hidden md:flex'} w-full md:w-auto relative`}>
+        <Sidebar 
+          currentChannel={currentChannel} 
+          changeChannel={changeChannel} 
+          openPinModal={openPinModal}
+          openNearbyModal={openNearbyModal}
+          unreadMentions={unreadMentions}
+          privateChannels={privateChannels}
+          closePrivateChannel={closePrivateChannel}
+          joinedSpaces={joinedSpaces}
+          closeSpace={(spaceToClose) => {
+            updateJoinedSpaces(prev => prev.filter(c => c !== spaceToClose));
+            if (currentChannel === spaceToClose) setCurrentChannel('random');
+          }}
+          activeMobileTab={activeMobileTab}
+        />
+        <BottomNav 
+          activeTab={activeMobileTab} 
+          onChangeTab={setActiveMobileTab} 
+          unreadTabs={['spaces', 'pms'].filter(tab => {
+            if (tab === 'pms') return unreadMentions.some(m => m.startsWith('@'));
+            if (tab === 'spaces') return unreadMentions.some(m => !m.startsWith('@'));
+            return false;
+          })} 
+        />
+      </div>
+      
+      <div className={`${isMobileChatOpen ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0 relative`}>
         <Header 
           currentChannel={currentChannel} 
           onlineUsers={onlineUsers}
-          onMenuClick={() => setIsMobileMenuOpen(true)}
+          isMobileChatOpen={isMobileChatOpen}
+          onBack={() => setIsMobileChatOpen(false)}
           onUserClick={startPrivateMessage}
         />
         
@@ -209,6 +296,7 @@ function App() {
           messages={messages} 
           loading={loading} 
           typingUsers={typingUsers}
+          onReply={(msg) => setReplyingTo(msg)}
         />
         
         <div className="sticky bottom-0 w-full z-10">
@@ -217,6 +305,8 @@ function App() {
           <ChatInput 
             onSendMessage={handleSendMessage} 
             broadcastTyping={broadcastTyping}
+            replyingTo={replyingTo}
+            onCancelReply={() => setReplyingTo(null)}
           />
         </div>
       </div>

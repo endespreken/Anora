@@ -4,11 +4,11 @@ import { sendMessage, addFriendWithPin, checkNicknameExists, checkEmailExists, r
 export function useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage) {
   const { user, pseudo, changePseudo, isRegistered, markAsRegistered } = useAuth();
 
-  const parseCommand = async (text) => {
+  const parseCommand = async (text, replyToId = null) => {
     const trimmed = text.trim();
     if (!trimmed.startsWith('/')) {
       // Normal message
-      await sendMessage(currentChannel, pseudo, trimmed);
+      await sendMessage(currentChannel, pseudo, trimmed, false, replyToId);
       
       // Anora Bot Auto-Reply (Local Only)
       if (trimmed.toLowerCase().includes('anora')) {

@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Moon, Sun, Hash, Menu, MessageCircle } from 'lucide-react';
+import { Users, Moon, Sun, Hash, Menu, MessageCircle, ArrowLeft } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 
-export default function Header({ currentChannel, onlineUsers = [], onMenuClick, onUserClick }) {
+export default function Header({ currentChannel, onlineUsers = [], onMenuClick, onUserClick, isMobileChatOpen, onBack }) {
   const { theme, toggleTheme } = useTheme();
   const { pseudo } = useAuth();
   const [showMembers, setShowMembers] = useState(false);
@@ -22,12 +22,22 @@ export default function Header({ currentChannel, onlineUsers = [], onMenuClick, 
   return (
     <header className="h-20 glass-header flex items-center justify-between px-4 md:px-8 z-10 sticky top-0">
       <div className="flex items-center space-x-3 md:space-x-4">
-        <button 
-          onClick={onMenuClick}
-          className="md:hidden p-2 -ml-2 text-textMuted hover:text-text hover:bg-secondary/50 rounded-lg transition-colors"
-        >
-          <Menu size={24} />
-        </button>
+        {isMobileChatOpen ? (
+          <button 
+            onClick={onBack}
+            className="md:hidden p-2 -ml-2 text-textMuted hover:text-text hover:bg-secondary/50 rounded-lg transition-colors"
+            title="Back to list"
+          >
+            <ArrowLeft size={24} />
+          </button>
+        ) : (
+          <button 
+            onClick={onMenuClick}
+            className="hidden p-2 -ml-2 text-textMuted hover:text-text hover:bg-secondary/50 rounded-lg transition-colors"
+          >
+            <Menu size={24} />
+          </button>
+        )}
         <div className="flex items-center text-text">
           <Hash size={20} className="text-primary mr-1.5 md:mr-2 md:w-6 md:h-6" />
           <h1 className="text-lg md:text-xl font-bold capitalize tracking-tight">{currentChannel}</h1>

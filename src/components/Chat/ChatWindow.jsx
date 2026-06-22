@@ -2,8 +2,9 @@ import React, { useRef, useEffect } from 'react';
 import MessageBubble from './MessageBubble';
 import { useAuth } from '../../contexts/AuthContext';
 import { MessageSquareDashed } from 'lucide-react';
+import { addReaction } from '../../services/dbServices';
 
-export default function ChatWindow({ messages, loading, typingUsers = [] }) {
+export default function ChatWindow({ messages, loading, typingUsers = [], onReply }) {
   const { pseudo } = useAuth();
   const bottomRef = useRef(null);
 
@@ -39,6 +40,9 @@ export default function ChatWindow({ messages, loading, typingUsers = [] }) {
               key={msg.id || msg.created_at + Math.random()} 
               message={msg} 
               isOwn={msg.user_pseudo === pseudo}
+              onReply={() => onReply && onReply(msg)}
+              onReact={(emoji) => addReaction(msg.id, emoji, pseudo)}
+              allMessages={messages}
             />
           ))}
           {typingUsers.length > 0 && (

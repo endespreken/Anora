@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { generatePin } from '../../services/dbServices';
 
 export default function PinGeneratorModal({ isOpen, onClose }) {
-  const { user } = useAuth();
+  const { user, isRegistered } = useAuth();
   const [pin, setPin] = useState(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -19,7 +19,7 @@ export default function PinGeneratorModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   const handleGenerate = async () => {
-    if (!user) return;
+    if (!user || !isRegistered) return;
     setLoading(true);
     setCopied(false);
     const newPin = await generatePin(user.id);
@@ -57,7 +57,16 @@ export default function PinGeneratorModal({ isOpen, onClose }) {
           </p>
 
           <div className="bg-secondary/20 border border-border rounded-2xl p-8 flex flex-col items-center justify-center min-h-[160px] relative group">
-            {loading ? (
+            {!isRegistered ? (
+              <div className="text-center animate-fade-in">
+                <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-3">
+                  <span className="text-red-500 text-xl font-bold">!</span>
+                </div>
+                <p className="text-textMuted text-sm font-medium px-2">
+                  Silakan registrasi nickname terlebih dahulu (ketik <span className="font-mono text-primary bg-primary/10 px-1 py-0.5 rounded">/register [nama] [pass] [email]</span> di chat) sebelum meng-generate PIN.
+                </p>
+              </div>
+            ) : loading ? (
               <RefreshCw className="animate-spin text-primary" size={32} />
             ) : pin ? (
               <div className="text-center w-full">
@@ -90,7 +99,7 @@ export default function PinGeneratorModal({ isOpen, onClose }) {
           <div className="mt-8">
             <button
               onClick={handleGenerate}
-              disabled={loading}
+              disabled={loading || !isRegistered}
               className="w-full bg-text text-surface py-3.5 rounded-xl font-semibold hover:bg-opacity-90 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:hover:translate-y-0 shadow-lg shadow-black/10"
             >
               {pin ? 'Generate New PIN' : 'Generate PIN'}

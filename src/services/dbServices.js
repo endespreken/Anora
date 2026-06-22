@@ -1,11 +1,12 @@
 import { supabase } from '../config/supabaseClient';
 
-export const sendMessage = async (channel, pseudo, content, isSystem = false) => {
+export const sendMessage = async (channel, pseudo, content, isSystem = false, replyToId = null) => {
+  const insertData = { channel_name: channel, user_pseudo: pseudo, content, is_system_msg: isSystem };
+  if (replyToId) insertData.reply_to_id = replyToId;
+
   const { data, error } = await supabase
     .from('messages')
-    .insert([
-      { channel_name: channel, user_pseudo: pseudo, content, is_system_msg: isSystem }
-    ]);
+    .insert([insertData]);
     
   if (error) {
     console.error("Error sending message:", error);
@@ -169,4 +170,36 @@ export const markMessagesAsRead = async (channel, userPseudo) => {
   if (error) {
     console.error("Error marking messages as read:", error);
   }
+};
+
+export const addReaction = async (messageId, emoji, userPseudo) => {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('reactions')
+    .eq('id', messageId)
+    .single();
+
+  if (error || !data) return;
+
+  const currentReactions = data.reactions || {};
+  
+  if (!currentReactions[emoji]) {
+    currentReactions[emoji] = [];
+  }
+
+  if (currentReactions[emoji].includes(userPseudo)) {
+    currentReactions[emoji] = currentReactions[emoji].filter(p => p !== userPseudo);
+    if (currentReactions[emoji].length === 0) {
+      delete currentReactions[emoji];
+    }
+  } else {
+    currentReactions[emoji].push(userPseudo);
+  }
+
+  const { error: updateError } = await supabase
+    .from('messages')
+    .update({ reactions: currentReactions })
+    .eq('id', messageId);
+    
+  if (updateError) console.error("Error updating reaction:", updateError);
 };

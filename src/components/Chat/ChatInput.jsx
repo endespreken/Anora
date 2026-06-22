@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Command, Smile } from 'lucide-react';
+import { Send, Command, Smile, X, Reply } from 'lucide-react';
 import EmojiPicker, { EmojiStyle } from 'emoji-picker-react';
 
-export default function ChatInput({ onSendMessage, broadcastTyping }) {
+export default function ChatInput({ onSendMessage, broadcastTyping, replyingTo, onCancelReply }) {
   const [text, setText] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const typingTimeoutRef = useRef(null);
@@ -48,6 +48,21 @@ export default function ChatInput({ onSendMessage, broadcastTyping }) {
   return (
     <div className="p-4 md:p-6 bg-transparent relative">
       <div className="max-w-5xl mx-auto relative">
+        {replyingTo && (
+          <div className="absolute bottom-full mb-2 left-2 right-2 bg-surface/90 backdrop-blur-md border border-primary/30 px-4 py-2.5 rounded-2xl flex justify-between items-center shadow-lg animate-slide-up z-40">
+            <div className="flex items-center space-x-3 overflow-hidden">
+              <Reply size={16} className="text-primary flex-shrink-0" />
+              <div className="flex flex-col overflow-hidden text-sm">
+                <span className="font-semibold text-primary truncate">Replying to {replyingTo.user_pseudo}</span>
+                <span className="text-textMuted truncate max-w-[200px] sm:max-w-xs">{replyingTo.content.substring(0, 60)}{replyingTo.content.length > 60 ? '...' : ''}</span>
+              </div>
+            </div>
+            <button type="button" onClick={onCancelReply} className="text-textMuted hover:text-red-400 p-1.5 bg-secondary/50 hover:bg-secondary rounded-full transition-colors flex-shrink-0">
+              <X size={16} />
+            </button>
+          </div>
+        )}
+        
         {showEmoji && (
           <div ref={emojiRef} className="absolute bottom-full mb-4 right-0 z-50 animate-slide-up shadow-2xl rounded-2xl overflow-hidden border border-border">
             <EmojiPicker 

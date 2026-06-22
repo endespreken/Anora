@@ -16,15 +16,24 @@ export function useChatRealtime(channel, user, pseudo) {
       setLoading(true);
       const data = await fetchMessages(channel);
       if (mounted) {
-        const welcomeMsg = {
-          id: `local-welcome-${Date.now()}`,
-          channel_name: channel,
-          user_pseudo: 'Anora 🤖',
-          content: `Selamat datang di channel ${channel}! Ketik /help apabila membutuhkan bantuan.`,
-          is_system_msg: false,
-          created_at: new Date().toISOString()
-        };
-        setMessages([...data, welcomeMsg]);
+        const hasSeenWelcome = sessionStorage.getItem(`welcome_${channel}`);
+        const isPrivateChannel = channel.startsWith('@');
+        
+        if (!hasSeenWelcome && !isPrivateChannel) {
+          const welcomeMsg = {
+            id: `local-welcome-${Date.now()}`,
+            channel_name: channel,
+            user_pseudo: 'Anora 🤖',
+            content: `Selamat datang di channel ${channel}! Ketik /help apabila membutuhkan bantuan.`,
+            is_system_msg: false,
+            created_at: new Date().toISOString()
+          };
+          setMessages([...data, welcomeMsg]);
+          sessionStorage.setItem(`welcome_${channel}`, 'true');
+        } else {
+          setMessages([...data]);
+        }
+        
         setLoading(false);
       }
     };

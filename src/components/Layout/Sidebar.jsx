@@ -3,11 +3,9 @@ import { Hash, Radar, UserPlus, Zap, MapPin, X, Lock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchFriends } from '../../services/dbServices';
 
-export default function Sidebar({ currentChannel, changeChannel, openPinModal, openNearbyModal, unreadMentions = [], isOpen, onClose, privateChannels = [], closePrivateChannel }) {
+export default function Sidebar({ currentChannel, changeChannel, openPinModal, openNearbyModal, unreadMentions = [], privateChannels = [], closePrivateChannel, joinedSpaces = ['random'], closeSpace, activeMobileTab = 'pms' }) {
   const { user, pseudo } = useAuth();
   const [friends, setFriends] = useState([]);
-  
-  const channels = ['general', 'tech', 'random', 'help'];
 
   useEffect(() => {
     if (user) {
@@ -20,12 +18,7 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
   }, [user]);
 
   return (
-    <div className={`
-      fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out
-      ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      md:relative md:translate-x-0
-      w-72 glass-panel h-[100dvh] flex flex-col border-r border-border border-y-0 border-l-0
-    `}>
+    <div className="w-full md:w-72 glass-panel h-[100dvh] flex flex-col border-r border-border border-y-0 border-l-0">
       <div className="p-6 border-b border-border flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
@@ -33,26 +26,22 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
           </div>
           <h1 className="font-bold text-2xl tracking-tight text-text">Anora</h1>
         </div>
-        <button 
-          onClick={onClose} 
-          className="md:hidden p-2 text-textMuted hover:text-text hover:bg-secondary/50 rounded-lg transition-colors"
-        >
-          <X size={20} />
-        </button>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-8">
-        <div>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-3 px-2">
+      <div className="flex-1 overflow-y-auto p-4 md:space-y-8 pb-20 md:pb-4">
+        
+        {/* SPACES */}
+        <div className={activeMobileTab === 'spaces' ? 'block' : 'hidden md:block'}>
+          <h2 className="hidden md:block text-xs font-bold uppercase tracking-wider text-textMuted mb-3 px-2">
             Spaces
           </h2>
           <ul className="space-y-1">
-            {channels.map(channel => {
+            {joinedSpaces.map(channel => {
               const isActive = currentChannel === channel;
               const isUnread = unreadMentions.includes(channel);
               
               return (
-                <li key={channel}>
+                <li key={channel} className="group relative">
                   <button 
                     onClick={() => changeChannel(channel)}
                     className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 ${
@@ -66,17 +55,37 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
                     <Hash size={18} className={`mr-3 ${isActive ? 'text-primary' : 'text-textMuted'}`} /> 
                     <span className="capitalize">{channel}</span>
                   </button>
+                  {channel !== 'random' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeSpace && closeSpace(channel);
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-textMuted hover:text-accent hover:bg-secondary/80 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
+                      title="Leave Space"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </li>
               );
             })}
           </ul>
         </div>
 
-        {privateChannels.length > 0 && (
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-3 px-2">
+        {/* PMs */}
+        <div className={activeMobileTab === 'pms' ? 'block' : 'hidden md:block'}>
+          {privateChannels.length > 0 && (
+            <h2 className="hidden md:block text-xs font-bold uppercase tracking-wider text-textMuted mb-3 px-2">
               Private Messages
             </h2>
+          )}
+          {privateChannels.length === 0 && (
+            <div className="md:hidden px-3 py-4 text-sm text-textMuted text-center bg-secondary/30 rounded-xl border border-dashed border-border mt-2">
+              Belum ada obrolan private.
+            </div>
+          )}
+          {privateChannels.length > 0 && (
             <ul className="space-y-1">
               {privateChannels.map(channel => {
                 const isActive = currentChannel === channel;
@@ -114,12 +123,13 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
                 );
               })}
             </ul>
-          </div>
-        )}
+          )}
+        </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-3 px-2">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-textMuted">
+        {/* CONNECTIONS */}
+        <div className={activeMobileTab === 'connections' ? 'block' : 'hidden md:block'}>
+          <div className="flex items-center justify-between mb-3 px-2 md:mt-0 mt-2">
+            <h2 className="hidden md:block text-xs font-bold uppercase tracking-wider text-textMuted">
               Connections
             </h2>
             <div className="flex items-center space-x-1">
@@ -159,7 +169,7 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
         </div>
       </div>
       
-      <div className="p-4 border-t border-border flex items-center justify-between text-xs text-textMuted">
+      <div className="hidden md:flex p-4 border-t border-border items-center justify-between text-xs text-textMuted">
         <span>Anora Web</span>
         <span className="flex items-center"><span className="w-1.5 h-1.5 rounded-full bg-primary mr-1.5"></span> Online</span>
       </div>
