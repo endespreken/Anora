@@ -20,6 +20,7 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
   }
 
   const isBeacon = content.startsWith('[BEACON SIGNAL]:');
+  const isPrivate = message.channel_name && message.channel_name.startsWith('@');
   
   const repliedMessage = reply_to_id ? allMessages.find(m => m.id === reply_to_id) : null;
   const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -31,96 +32,94 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
     >
       <div className={`max-w-[75%] flex flex-col relative group ${isOwn ? 'items-end' : 'items-start'}`}>
         
-        {/* Toggle Button */}
-        {!is_system_msg && (
-          <button 
-            onClick={() => setShowMenu(!showMenu)}
-            className={`absolute top-2 ${isOwn ? 'right-full mr-2' : 'left-full ml-2'} opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-textMuted hover:text-text bg-surface/50 hover:bg-surface rounded-full p-1 z-10 shadow-sm border border-transparent hover:border-border`}
-          >
-            <ChevronDown size={14} />
-          </button>
-        )}
-
-        {/* Action Menu */}
-        {!is_system_msg && showMenu && (
-          <div className={`absolute top-0 ${isOwn ? 'right-full mr-8' : 'left-full ml-8'} flex items-center space-x-1 bg-surface border border-border rounded-full shadow-lg p-1 z-20 animate-fade-in`}>
-            {quickReactions.map(emo => (
-              <button 
-                key={emo} 
-                onClick={() => {
-                  if (onReact) onReact(emo);
-                  setShowMenu(false);
-                }}
-                className="w-7 h-7 flex items-center justify-center hover:bg-secondary rounded-full transition-colors"
-                title="React"
-              >
-                {emoji(emo)}
-              </button>
-            ))}
-            <div className="w-px h-4 bg-border mx-1"></div>
-            <button 
-              onClick={() => {
-                if (onReply) onReply();
-                setShowMenu(false);
-              }}
-              className="w-7 h-7 flex items-center justify-center text-textMuted hover:text-primary hover:bg-secondary rounded-full transition-colors"
-              title="Reply"
-            >
-              <ReplyIcon size={14} />
-            </button>
+        {/* Username above bubble - Only for Channels/Spaces */}
+        {!isPrivate && (
+          <div className={`text-[11px] text-textMuted mb-1 px-1 flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            <span className="font-semibold text-text">{user_pseudo}</span>
           </div>
         )}
-
-        <div className="text-[11px] text-textMuted mb-1.5 flex items-center space-x-2 px-1 transition-opacity duration-200">
-          {isOwn ? (
-            <>
-              <span>{time}</span>
-              <span className="font-semibold text-text">{user_pseudo}</span>
-            </>
-          ) : (
-            <>
-              <span className="font-semibold text-text">{user_pseudo}</span>
-              <span>{time}</span>
-            </>
-          )}
-        </div>
         
-        <div className={`px-5 py-3 shadow-md relative overflow-hidden ${
+        {/* The Chat Bubble */}
+        <div className={`px-4 py-2 pt-3 shadow-md relative ${
           isBeacon 
             ? 'bg-surface border border-accent text-text rounded-2xl animate-pulse-slow shadow-accent/20'
             : isOwn 
               ? 'bg-gradient-to-br from-primary to-primaryHover text-white rounded-2xl rounded-tr-sm shadow-primary/20' 
               : 'bg-surface border border-border text-text rounded-2xl rounded-tl-sm'
         }`}>
+          
+          {/* Toggle Button Inside Bubble */}
+          {!is_system_msg && (
+            <button 
+              onClick={() => setShowMenu(!showMenu)}
+              className="absolute top-1 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-current hover:opacity-70 p-1 z-10"
+            >
+              <ChevronDown size={14} />
+            </button>
+          )}
+
+          {/* Action Menu Popover (Responsive positioned inside bubble container) */}
+          {!is_system_msg && showMenu && (
+            <div className={`absolute top-8 ${isOwn ? 'right-2' : 'left-2'} flex items-center space-x-1 bg-surface border border-border rounded-full shadow-lg p-1 z-30 animate-fade-in`}>
+              {quickReactions.map(emo => (
+                <button 
+                  key={emo} 
+                  onClick={() => {
+                    if (onReact) onReact(emo);
+                    setShowMenu(false);
+                  }}
+                  className="w-7 h-7 flex items-center justify-center hover:bg-secondary rounded-full transition-colors text-text"
+                  title="React"
+                >
+                  {emoji(emo)}
+                </button>
+              ))}
+              <div className="w-px h-4 bg-border mx-1"></div>
+              <button 
+                onClick={() => {
+                  if (onReply) onReply();
+                  setShowMenu(false);
+                }}
+                className="w-7 h-7 flex items-center justify-center text-textMuted hover:text-primary hover:bg-secondary rounded-full transition-colors"
+                title="Reply"
+              >
+                <ReplyIcon size={14} />
+              </button>
+            </div>
+          )}
+
           {isBeacon && (
-            <div className="absolute inset-0 bg-accent/5 pointer-events-none"></div>
+            <div className="absolute inset-0 bg-accent/5 pointer-events-none rounded-[inherit]"></div>
           )}
           
           {reply_to_id && (
             <div className={`mb-2 pl-2 border-l-2 text-xs opacity-80 ${isOwn ? 'border-white/50' : 'border-primary/50'}`}>
               <div className="font-semibold mb-0.5">{repliedMessage ? repliedMessage.user_pseudo : 'Unknown User'}</div>
-              <div className="truncate max-w-[200px]">
+              <div className="whitespace-pre-wrap">
                 {repliedMessage ? repliedMessage.content : 'Message not found'}
               </div>
             </div>
           )}
           
-          <div className="relative z-10 flex items-end justify-between space-x-3">
-            <div className="flex items-start">
+          <div className="relative z-10 flex flex-col">
+            <div className="flex items-start pr-4">
               {isBeacon && <Radio size={16} className="text-accent mr-2 mt-0.5 shrink-0" />}
-              <span className={`leading-relaxed whitespace-pre-wrap ${isBeacon ? 'font-medium' : ''}`}>
+              <span className={`leading-relaxed whitespace-pre-wrap break-words ${isBeacon ? 'font-medium' : ''}`}>
                 {isBeacon ? emoji(content.replace('[BEACON SIGNAL]:', '').trim()) : emoji(content)}
               </span>
             </div>
-            {isOwn && (
-              <div className="shrink-0 flex items-center pt-2">
-                {message.is_read ? (
-                  <CheckCheck size={14} className="text-blue-300 drop-shadow-sm" />
+            
+            {/* Timestamp and Checkmarks Inside Bubble */}
+            <div className={`flex items-center justify-end mt-1 -mb-1 space-x-1 text-[10px] ${isOwn ? 'text-white/70' : 'text-textMuted'}`}>
+              <span>{time}</span>
+              {isOwn && (
+                message.is_read ? (
+                  <CheckCheck size={14} className="text-blue-200 drop-shadow-sm" />
                 ) : (
-                  <Check size={14} className="text-white/60" />
-                )}
-              </div>
-            )}
+                  <Check size={14} className="text-current opacity-80" />
+                )
+              )}
+            </div>
           </div>
         </div>
         

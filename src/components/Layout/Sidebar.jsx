@@ -34,6 +34,7 @@ export default function Sidebar({
   const pressTimer = React.useRef(null);
 
   const startPress = (channel, isSpace) => {
+    if (channel === 'random') return;
     isLongPress.current = false;
     pressTimer.current = setTimeout(() => {
       isLongPress.current = true;
@@ -297,7 +298,7 @@ export default function Sidebar({
       {/* Context Menu Modal */}
       {contextMenu && (
         <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in" onClick={() => setContextMenu(null)}>
-          <div className="w-full sm:w-80 bg-surface border-t sm:border border-border rounded-t-3xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+          <div className="w-full sm:w-80 bg-surface border-t sm:border border-border rounded-t-3xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 pb-20 sm:pb-6 animate-slide-up" onClick={e => e.stopPropagation()}>
             <div className="w-12 h-1 bg-border rounded-full mx-auto mb-4 sm:hidden"></div>
             <h3 className="text-lg font-bold text-text mb-4 capitalize text-center">
               {contextMenu.channel.replace('@', '').split('-').find(p => p !== pseudo) || contextMenu.channel}

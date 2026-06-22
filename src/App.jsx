@@ -120,7 +120,7 @@ function App() {
       const pmSent = localStorage.getItem(`anora_welcome_pm_${pseudo}`);
       if (!pmSent) {
         const pmChannel = `@${[pseudo, 'Anora 🤖'].sort().join('-')}`;
-        const messageContent = `selamat datang di Anora, Chat Anonim Random\n\nBerikut perintah yang bisa kamu gunakan:\n1. /join [channel] - Pindah/masuk ke chat room\n2. /nick [name] [password] - Ganti nickname kamu\n3. /register [nick] [pass] [email] - Daftarkan nickname kamu\n4. /beacon [message] - Kirim sinyal beacon\n5. /addfriend [PIN] - Tambah teman dengan PIN\n\njika kamu perlu bantuan, silahkan chat Anora yah`;
+        const messageContent = `Selamat datang di Anora, Chat Anonim Random\n\nBerikut perintah yang bisa kamu gunakan:\n1. /join [channel] - Pindah/masuk ke chat room\n2. /nick [nickname] - Ganti nickname temporary\n3. /nick [nickname] [password] - Login/verifikasi nickname yang sudah diregistrasi\n4. /register [nick] [pass] [email] - Daftarkan nickname kamu\n5. /beacon [message] - Kirim sinyal beacon\n6. /addfriend [PIN] - Tambah teman dengan PIN\n\njika kamu perlu bantuan, silahkan chat Anora yah`;
         
         updatePrivateChannels(prev => {
           if (!prev.includes(pmChannel)) return [...prev, pmChannel];
