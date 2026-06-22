@@ -65,11 +65,25 @@ export function useWebRTC(pseudo) {
         }
         setCaller(payload.sender);
         setCallState('ringing');
-        // Store the offer to be processed when accepted
-        pcRef.current = new RTCPeerConnection(ICE_SERVERS);
-        pcRef.current.remoteOffer = payload.data.sdp;
         
+        pcRef.current = new RTCPeerConnection(ICE_SERVERS);
+        pcRef.current.iceQueue = [];
         setupPeerConnection(payload.sender);
+        
+        // Set remote description immediately so ICE candidates can be added
+        await pcRef.current.setRemoteDescription(new RTCSessionDescription(payload.data.sdp));
+        
+        // Process any queued ICE candidates
+        if (pcRef.current.iceQueue) {
+          for (let candidate of pcRef.current.iceQueue) {
+            try {
+              await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (e) {
+              console.error('Error adding queued ICE candidate', e);
+            }
+          }
+          pcRef.current.iceQueue = null;
+        }
       } 
       else if (payload.type === 'answer') {
         if (pcRef.current) {
@@ -78,11 +92,17 @@ export function useWebRTC(pseudo) {
         }
       } 
       else if (payload.type === 'ice-candidate') {
-        if (pcRef.current && pcRef.current.remoteDescription) {
-          try {
-            await pcRef.current.addIceCandidate(new RTCIceCandidate(payload.data.candidate));
-          } catch (e) {
-            console.error('Error adding ICE candidate', e);
+        if (pcRef.current) {
+          if (pcRef.current.remoteDescription) {
+            try {
+              await pcRef.current.addIceCandidate(new RTCIceCandidate(payload.data.candidate));
+            } catch (e) {
+              console.error('Error adding ICE candidate', e);
+            }
+          } else {
+            if (pcRef.current.iceQueue !== null) {
+              pcRef.current.iceQueue.push(payload.data.candidate);
+            }
           }
         }
       } 
@@ -154,7 +174,7 @@ export function useWebRTC(pseudo) {
 
     stream.getTracks().forEach(track => pcRef.current.addTrack(track, stream));
 
-    await pcRef.current.setRemoteDescription(new RTCSessionDescription(pcRef.current.remoteOffer));
+    // remoteDescription is already set when the offer arrived.
     
     const answer = await pcRef.current.createAnswer();
     await pcRef.current.setLocalDescription(answer);
