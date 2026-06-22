@@ -228,11 +228,13 @@ export default function Sidebar({
 
         {/* CONNECTIONS */}
         <div className={activeMobileTab === 'connections' ? 'block' : 'hidden md:block'}>
-          <div className="flex items-center justify-between mb-3 px-2 md:mt-0 mt-2">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3 px-2 md:mt-0 mt-2">
             <h2 className="hidden md:block text-xs font-bold uppercase tracking-wider text-textMuted">
               Connections
             </h2>
-            <div className="flex items-center space-x-1">
+            
+            {/* Desktop Action Icons */}
+            <div className="hidden md:flex items-center space-x-1">
               <button 
                 onClick={openNearbyModal}
                 className="text-textMuted hover:text-primary transition-colors bg-secondary/50 p-1.5 rounded-lg"
@@ -246,6 +248,24 @@ export default function Sidebar({
                 title="Add Connection"
               >
                 <UserPlus size={16} />
+              </button>
+            </div>
+
+            {/* Mobile CTAs */}
+            <div className="md:hidden flex flex-col space-y-2 mb-4 mt-2 w-full">
+              <button 
+                onClick={openNearbyModal}
+                className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-gradient-to-r from-primary to-accent text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-opacity"
+              >
+                <MapPin size={18} />
+                <span>Cari Teman Sekitar</span>
+              </button>
+              <button 
+                onClick={openPinModal}
+                className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-surface text-text font-bold rounded-xl border border-border shadow-sm hover:bg-secondary/50 transition-colors"
+              >
+                <UserPlus size={18} />
+                <span>Add Connection</span>
               </button>
             </div>
           </div>
