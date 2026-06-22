@@ -63,4 +63,13 @@
   ::-webkit-scrollbar-thumb:hover {
     background-color: var(--color-text-muted);
   }
+
+  /* Fix for react-easy-emoji inside Tailwind (Tailwind makes img display:block by default) */
+  img[src*="twemoji"] {
+    display: inline-block !important;
+    height: 1.2em;
+    width: 1.2em;
+    margin: 0 .05em 0 .1em;
+    vertical-align: -0.1em;
+  }
 }
