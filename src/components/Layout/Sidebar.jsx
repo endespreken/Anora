@@ -1,12 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { Hash, Radar, UserPlus, Zap, MapPin, X, Lock } from 'lucide-react';
+import { Hash, Radar, UserPlus, Zap, MapPin, X, Lock, Pin } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchFriends } from '../../services/dbServices';
 
-export default function Sidebar({ currentChannel, changeChannel, openPinModal, openNearbyModal, unreadCounts = {}, privateChannels = [], closePrivateChannel, joinedSpaces = ['random'], closeSpace, activeMobileTab = 'pms', onMarkAsRead }) {
+export default function Sidebar({ 
+  currentChannel, changeChannel, openPinModal, openNearbyModal, 
+  unreadCounts = {}, privateChannels = [], closePrivateChannel, 
+  joinedSpaces = ['random'], closeSpace, activeMobileTab = 'pms', 
+  onMarkAsRead, pinnedChannels = [], onPinChat, globalTyping = {} 
+}) {
   const { user, pseudo } = useAuth();
   const [friends, setFriends] = useState([]);
   const [contextMenu, setContextMenu] = useState(null);
+
+  const sortedSpaces = [...joinedSpaces].sort((a, b) => {
+    const aPinned = pinnedChannels.includes(a);
+    const bPinned = pinnedChannels.includes(b);
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+    return 0;
+  });
+
+  const sortedPMs = [...privateChannels].sort((a, b) => {
+    const aPinned = pinnedChannels.includes(a);
+    const bPinned = pinnedChannels.includes(b);
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+    return 0;
+  });
 
   const isLongPress = React.useRef(false);
   const pressTimer = React.useRef(null);
@@ -63,10 +84,12 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
             Spaces
           </h2>
           <ul className="space-y-1">
-            {joinedSpaces.map(channel => {
+            {sortedSpaces.map(channel => {
               const isActive = currentChannel === channel;
               const unreadCount = unreadCounts[channel] || 0;
               const isUnread = unreadCount > 0;
+              const isPinned = pinnedChannels.includes(channel);
+              const isTyping = globalTyping[channel] && globalTyping[channel].length > 0;
               
               return (
                 <li key={channel} className="group relative">
@@ -79,16 +102,22 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
                     onMouseUp={endPress}
                     onMouseLeave={endPress}
                     onContextMenu={(e) => e.preventDefault()}
-                    className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 pr-8 select-none ${
+                    className={`w-full flex items-center px-3 py-2 rounded-xl transition-all duration-200 pr-8 select-none ${
                       isActive 
                       ? 'bg-primary/10 text-primary font-semibold shadow-sm' 
                       : isUnread 
-                        ? 'text-accent animate-pulse bg-accent/10 font-bold'
+                        ? 'text-accent bg-accent/10 font-bold'
                         : 'text-textMuted hover:bg-secondary/50 hover:text-text'
                     }`}
                   >
                     <Hash size={18} className={`mr-3 flex-shrink-0 ${isActive ? 'text-primary' : 'text-textMuted'}`} /> 
-                    <span className="capitalize mr-2 truncate">{channel}</span>
+                    <div className="flex flex-col items-start overflow-hidden mr-2 flex-1 text-left">
+                      <div className="flex items-center w-full">
+                        <span className="capitalize truncate">{channel}</span>
+                        {isPinned && <Pin size={12} className="ml-1.5 text-primary flex-shrink-0" />}
+                      </div>
+                      {isTyping && <span className="text-[10px] text-green-500 font-medium animate-pulse mt-0.5">Typing...</span>}
+                    </div>
                     {isUnread && (
                       <span className="bg-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] h-[20px] flex items-center justify-center shadow-sm flex-shrink-0">
                         {unreadCount > 99 ? '99+' : unreadCount}
@@ -127,10 +156,12 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
           )}
           {privateChannels.length > 0 && (
             <ul className="space-y-1">
-              {privateChannels.map(channel => {
+              {sortedPMs.map(channel => {
                 const isActive = currentChannel === channel;
                 const unreadCount = unreadCounts[channel] || 0;
                 const isUnread = unreadCount > 0;
+                const isPinned = pinnedChannels.includes(channel);
+                const isTyping = globalTyping[channel] && globalTyping[channel].length > 0;
                 
                 const parts = channel.replace('@', '').split('-');
                 const targetUser = parts.find(p => p !== pseudo) || parts[0];
@@ -146,16 +177,22 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
                       onMouseUp={endPress}
                       onMouseLeave={endPress}
                       onContextMenu={(e) => e.preventDefault()}
-                      className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 pr-8 select-none ${
+                      className={`w-full flex items-center px-3 py-2 rounded-xl transition-all duration-200 pr-8 select-none ${
                         isActive 
                         ? 'bg-primary/10 text-primary font-semibold shadow-sm' 
                         : isUnread 
-                          ? 'text-accent animate-pulse bg-accent/10 font-bold'
+                          ? 'text-accent bg-accent/10 font-bold'
                           : 'text-textMuted hover:bg-secondary/50 hover:text-text'
                       }`}
                     >
                       <Lock size={16} className={`mr-3 flex-shrink-0 ${isActive ? 'text-primary' : 'text-textMuted'}`} /> 
-                      <span className="capitalize mr-2 truncate">{targetUser}</span>
+                      <div className="flex flex-col items-start overflow-hidden mr-2 flex-1 text-left">
+                        <div className="flex items-center w-full">
+                          <span className="capitalize truncate">{targetUser}</span>
+                          {isPinned && <Pin size={12} className="ml-1.5 text-primary flex-shrink-0" />}
+                        </div>
+                        {isTyping && <span className="text-[10px] text-green-500 font-medium animate-pulse mt-0.5">Typing...</span>}
+                      </div>
                       {isUnread && (
                         <span className="bg-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] h-[20px] flex items-center justify-center shadow-sm flex-shrink-0">
                           {unreadCount > 99 ? '99+' : unreadCount}
@@ -238,11 +275,12 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
             <div className="space-y-2">
               <button 
                 onClick={() => {
+                  if (onPinChat) onPinChat(contextMenu.channel);
                   setContextMenu(null);
                 }}
                 className="w-full flex items-center px-4 py-3 bg-secondary/30 hover:bg-secondary/50 text-text rounded-xl transition-colors font-medium"
               >
-                Pin Chat (Coming Soon)
+                {pinnedChannels.includes(contextMenu.channel) ? 'Unpin Chat' : 'Pin Chat'}
               </button>
               <button 
                 onClick={() => {

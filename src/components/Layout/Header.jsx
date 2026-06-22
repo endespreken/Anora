@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Moon, Sun, Hash, Menu, MessageCircle, ArrowLeft, Lock, Phone } from 'lucide-react';
+import { Users, Moon, Sun, Hash, Menu, MessageCircle, ArrowLeft, Lock } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 
-export default function Header({ currentChannel, onlineUsers = [], onMenuClick, onUserClick, isMobileChatOpen, onBack, onCallClick }) {
+export default function Header({ currentChannel, onlineUsers = [], onMenuClick, onUserClick, isMobileChatOpen, onBack }) {
   const { theme, toggleTheme } = useTheme();
   const { pseudo } = useAuth();
   const [showMembers, setShowMembers] = useState(false);
@@ -100,17 +100,7 @@ export default function Header({ currentChannel, onlineUsers = [], onMenuClick, 
         )}
       </div>
 
-      <div className="flex items-center space-x-4 md:space-x-6">
-        {isPrivateChannel && onCallClick && (
-          <button 
-            onClick={() => onCallClick(displayChannelName)}
-            className="p-2.5 rounded-full bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-white transition-all duration-200 shadow-sm"
-            title="Start Audio Call"
-          >
-            <Phone size={18} />
-          </button>
-        )}
-
+      <div className="flex items-center space-x-6">
         <div className="hidden md:flex items-center space-x-2 text-sm bg-secondary/30 px-3 py-1.5 rounded-full border border-border">
           <span className="text-textMuted">As</span>
           <span className="font-semibold text-text bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">

@@ -55,21 +55,6 @@ class SoundManager {
     this.playTone(450, 'square', 0.15, 0.05, 0.1);
     this.playTone(600, 'square', 0.2, 0.05, 0.2);
   }
-
-  playRingtone() {
-    this.init();
-    // A standard UK-like ring pattern (brrr-brrr)
-    this.playTone(400, 'sine', 0.4, 0.2);
-    this.playTone(450, 'sine', 0.4, 0.2);
-    this.playTone(400, 'sine', 0.4, 0.2, 0.6);
-    this.playTone(450, 'sine', 0.4, 0.2, 0.6);
-  }
-
-  playDialTone() {
-    this.init();
-    // A standard dial tone (continuous sound, we simulate a burst)
-    this.playTone(425, 'sine', 1.0, 0.1);
-  }
 }
 
 export const soundManager = new SoundManager();

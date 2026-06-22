@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
 import BottomNav from './components/Layout/BottomNav';
@@ -6,9 +6,7 @@ import ChatWindow from './components/Chat/ChatWindow';
 import ChatInput from './components/Chat/ChatInput';
 import PinGeneratorModal from './components/Modals/PinGeneratorModal';
 import NearbyUsersModal from './components/Modals/NearbyUsersModal';
-import CallModal from './components/Modals/CallModal';
 import { useChatRealtime } from './hooks/useChatRealtime';
-import { useWebRTC } from './hooks/useWebRTC';
 import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './config/supabaseClient';
@@ -28,20 +26,10 @@ function App() {
   const [privateChannels, setPrivateChannels] = useState([]);
   const [joinedSpaces, setJoinedSpaces] = useState(['random']);
   const [replyingTo, setReplyingTo] = useState(null);
+  const [pinnedChannels, setPinnedChannels] = useState([]);
+  const [globalTyping, setGlobalTyping] = useState({});
+  const globalChannelRef = useRef(null);
   
-  const {
-    callState,
-    caller,
-    callTarget,
-    localStream,
-    remoteStream,
-    isMuted,
-    startCall,
-    acceptCall,
-    endCall,
-    toggleMute
-  } = useWebRTC(pseudo);
-
   // Load channels when pseudo changes
   useEffect(() => {
     if (pseudo) {
@@ -52,8 +40,25 @@ function App() {
       const savedSpaces = localStorage.getItem(`anora_spaces_${pseudo}`);
       if (savedSpaces) setJoinedSpaces(JSON.parse(savedSpaces));
       else setJoinedSpaces(['random']);
+
+      const savedPinned = localStorage.getItem(`anora_pinned_${pseudo}`);
+      if (savedPinned) setPinnedChannels(JSON.parse(savedPinned));
+      else setPinnedChannels([]);
     }
   }, [pseudo]);
+
+  const handlePinChat = (channel) => {
+    setPinnedChannels(prev => {
+      let next;
+      if (prev.includes(channel)) {
+        next = prev.filter(c => c !== channel);
+      } else {
+        next = [...prev, channel];
+      }
+      if (pseudo) localStorage.setItem(`anora_pinned_${pseudo}`, JSON.stringify(next));
+      return next;
+    });
+  };
 
   // Wrappers to save to localStorage safely
   const updatePrivateChannels = (updater) => {
@@ -195,10 +200,38 @@ function App() {
           soundManager.playReceiveChannel();
         }
       })
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        const { channel_name, user_pseudo } = payload.payload;
+        if (user_pseudo !== pseudo) {
+          setGlobalTyping(prev => {
+            const current = prev[channel_name] || [];
+            if (!current.includes(user_pseudo)) {
+              return { ...prev, [channel_name]: [...current, user_pseudo] };
+            }
+            return prev;
+          });
+          
+          setTimeout(() => {
+            setGlobalTyping(prev => {
+              const current = prev[channel_name] || [];
+              const filtered = current.filter(u => u !== user_pseudo);
+              if (filtered.length === 0) {
+                const next = { ...prev };
+                delete next[channel_name];
+                return next;
+              }
+              return { ...prev, [channel_name]: filtered };
+            });
+          }, 3000);
+        }
+      })
       .subscribe();
+
+    globalChannelRef.current = globalChannel;
 
     return () => {
       globalChannel.unsubscribe();
+      globalChannelRef.current = null;
     };
   }, [pseudo, currentChannel]);
 
@@ -258,6 +291,17 @@ function App() {
 
   const { parseCommand } = useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage);
 
+  const globalBroadcastTyping = () => {
+    broadcastTyping(); // For current channel
+    if (globalChannelRef.current) {
+      globalChannelRef.current.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { channel_name: currentChannel, user_pseudo: pseudo }
+      });
+    }
+  };
+
   const handleSendMessage = async (text) => {
     const success = await parseCommand(text, replyingTo?.id);
     if (success) {
@@ -302,6 +346,9 @@ function App() {
             if (currentChannel === spaceToClose) setCurrentChannel('random');
           }}
           activeMobileTab={activeMobileTab}
+          pinnedChannels={pinnedChannels}
+          onPinChat={handlePinChat}
+          globalTyping={globalTyping}
         />
         <BottomNav 
           activeTab={activeMobileTab} 
@@ -321,7 +368,6 @@ function App() {
           isMobileChatOpen={isMobileChatOpen}
           onBack={() => setIsMobileChatOpen(false)}
           onUserClick={startPrivateMessage}
-          onCallClick={startCall}
         />
         
         <ChatWindow 
@@ -336,7 +382,7 @@ function App() {
           <div className="absolute inset-x-0 bottom-full h-12 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>
           <ChatInput 
             onSendMessage={handleSendMessage} 
-            broadcastTyping={broadcastTyping}
+            broadcastTyping={globalBroadcastTyping}
             replyingTo={replyingTo}
             onCancelReply={() => setReplyingTo(null)}
           />
@@ -352,17 +398,6 @@ function App() {
         isOpen={isNearbyModalOpen}
         onClose={closeNearbyModal}
         onlineUsers={onlineUsers}
-      />
-
-      <CallModal
-        callState={callState}
-        caller={caller}
-        callTarget={callTarget}
-        remoteStream={remoteStream}
-        isMuted={isMuted}
-        acceptCall={acceptCall}
-        endCall={endCall}
-        toggleMute={toggleMute}
       />
     </div>
   );
