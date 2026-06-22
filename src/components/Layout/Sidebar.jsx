@@ -3,9 +3,36 @@ import { Hash, Radar, UserPlus, Zap, MapPin, X, Lock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchFriends } from '../../services/dbServices';
 
-export default function Sidebar({ currentChannel, changeChannel, openPinModal, openNearbyModal, unreadCounts = {}, privateChannels = [], closePrivateChannel, joinedSpaces = ['random'], closeSpace, activeMobileTab = 'pms' }) {
+export default function Sidebar({ currentChannel, changeChannel, openPinModal, openNearbyModal, unreadCounts = {}, privateChannels = [], closePrivateChannel, joinedSpaces = ['random'], closeSpace, activeMobileTab = 'pms', onMarkAsRead }) {
   const { user, pseudo } = useAuth();
   const [friends, setFriends] = useState([]);
+  const [contextMenu, setContextMenu] = useState(null);
+
+  const isLongPress = React.useRef(false);
+  const pressTimer = React.useRef(null);
+
+  const startPress = (channel, isSpace) => {
+    isLongPress.current = false;
+    pressTimer.current = setTimeout(() => {
+      isLongPress.current = true;
+      if (window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(50); // Haptic feedback on mobile
+      }
+      setContextMenu({ channel, isSpace });
+    }, 600); // 600ms hold
+  };
+
+  const endPress = () => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+    }
+  };
+
+  const handleChannelClick = (channel) => {
+    if (!isLongPress.current) {
+      changeChannel(channel);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -44,8 +71,15 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
               return (
                 <li key={channel} className="group relative">
                   <button 
-                    onClick={() => changeChannel(channel)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                    onClick={() => handleChannelClick(channel)}
+                    onTouchStart={() => startPress(channel, true)}
+                    onTouchEnd={endPress}
+                    onTouchMove={endPress}
+                    onMouseDown={() => startPress(channel, true)}
+                    onMouseUp={endPress}
+                    onMouseLeave={endPress}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 pr-8 select-none ${
                       isActive 
                       ? 'bg-primary/10 text-primary font-semibold shadow-sm' 
                       : isUnread 
@@ -53,12 +87,10 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
                         : 'text-textMuted hover:bg-secondary/50 hover:text-text'
                     }`}
                   >
-                    <div className="flex items-center">
-                      <Hash size={18} className={`mr-3 ${isActive ? 'text-primary' : 'text-textMuted'}`} /> 
-                      <span className="capitalize">{channel}</span>
-                    </div>
+                    <Hash size={18} className={`mr-3 flex-shrink-0 ${isActive ? 'text-primary' : 'text-textMuted'}`} /> 
+                    <span className="capitalize mr-2 truncate">{channel}</span>
                     {isUnread && (
-                      <span className="bg-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-sm">
+                      <span className="bg-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] h-[20px] flex items-center justify-center shadow-sm flex-shrink-0">
                         {unreadCount > 99 ? '99+' : unreadCount}
                       </span>
                     )}
@@ -106,8 +138,15 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
                 return (
                   <li key={channel} className="group relative">
                     <button 
-                      onClick={() => changeChannel(channel)}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                      onClick={() => handleChannelClick(channel)}
+                      onTouchStart={() => startPress(channel, false)}
+                      onTouchEnd={endPress}
+                      onTouchMove={endPress}
+                      onMouseDown={() => startPress(channel, false)}
+                      onMouseUp={endPress}
+                      onMouseLeave={endPress}
+                      onContextMenu={(e) => e.preventDefault()}
+                      className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 pr-8 select-none ${
                         isActive 
                         ? 'bg-primary/10 text-primary font-semibold shadow-sm' 
                         : isUnread 
@@ -115,12 +154,10 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
                           : 'text-textMuted hover:bg-secondary/50 hover:text-text'
                       }`}
                     >
-                      <div className="flex items-center">
-                        <Lock size={16} className={`mr-3 ${isActive ? 'text-primary' : 'text-textMuted'}`} /> 
-                        <span className="capitalize">{targetUser}</span>
-                      </div>
+                      <Lock size={16} className={`mr-3 flex-shrink-0 ${isActive ? 'text-primary' : 'text-textMuted'}`} /> 
+                      <span className="capitalize mr-2 truncate">{targetUser}</span>
                       {isUnread && (
-                        <span className="bg-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-sm">
+                        <span className="bg-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] h-[20px] flex items-center justify-center shadow-sm flex-shrink-0">
                           {unreadCount > 99 ? '99+' : unreadCount}
                         </span>
                       )}
@@ -189,6 +226,50 @@ export default function Sidebar({ currentChannel, changeChannel, openPinModal, o
         <span>Anora Web</span>
         <span className="flex items-center"><span className="w-1.5 h-1.5 rounded-full bg-primary mr-1.5"></span> Online</span>
       </div>
+
+      {/* Context Menu Modal */}
+      {contextMenu && (
+        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in" onClick={() => setContextMenu(null)}>
+          <div className="w-full sm:w-80 bg-surface border-t sm:border border-border rounded-t-3xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-1 bg-border rounded-full mx-auto mb-4 sm:hidden"></div>
+            <h3 className="text-lg font-bold text-text mb-4 capitalize text-center">
+              {contextMenu.channel.replace('@', '').split('-').find(p => p !== pseudo) || contextMenu.channel}
+            </h3>
+            <div className="space-y-2">
+              <button 
+                onClick={() => {
+                  setContextMenu(null);
+                }}
+                className="w-full flex items-center px-4 py-3 bg-secondary/30 hover:bg-secondary/50 text-text rounded-xl transition-colors font-medium"
+              >
+                Pin Chat (Coming Soon)
+              </button>
+              <button 
+                onClick={() => {
+                  if (onMarkAsRead) onMarkAsRead(contextMenu.channel);
+                  setContextMenu(null);
+                }}
+                className="w-full flex items-center px-4 py-3 bg-secondary/30 hover:bg-secondary/50 text-text rounded-xl transition-colors font-medium"
+              >
+                Tandai sudah dibaca
+              </button>
+              <button 
+                onClick={() => {
+                  if (contextMenu.isSpace) {
+                    if (closeSpace && contextMenu.channel !== 'random') closeSpace(contextMenu.channel);
+                  } else {
+                    closePrivateChannel(contextMenu.channel);
+                  }
+                  setContextMenu(null);
+                }}
+                className="w-full flex items-center px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-colors font-bold"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

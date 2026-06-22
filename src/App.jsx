@@ -215,6 +215,17 @@ function App() {
     }
   }, [currentChannel, pseudo]);
 
+  const handleMarkAsRead = (channelToMark) => {
+    if (pseudo) {
+      markMessagesAsRead(channelToMark, pseudo);
+      setUnreadCounts(prev => {
+        const next = { ...prev };
+        delete next[channelToMark];
+        return next;
+      });
+    }
+  };
+
   const addLocalMessage = (content, botName = 'Anora 🤖') => {
     const localMsg = {
       id: `local-${Date.now()}-${Math.random()}`,
@@ -285,6 +296,7 @@ function App() {
           privateChannels={privateChannels}
           closePrivateChannel={closePrivateChannel}
           joinedSpaces={joinedSpaces}
+          onMarkAsRead={handleMarkAsRead}
           closeSpace={(spaceToClose) => {
             updateJoinedSpaces(prev => prev.filter(c => c !== spaceToClose));
             if (currentChannel === spaceToClose) setCurrentChannel('random');
