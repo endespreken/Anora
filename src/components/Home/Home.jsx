@@ -48,8 +48,8 @@ const Home = ({ onJoin }) => {
       <div className="glass-panel w-full max-w-md p-8 rounded-3xl flex flex-col gap-8 relative z-10 animate-fade-in shadow-2xl">
         
         <div className="text-center">
-          <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30 mb-5 transform hover:scale-105 transition-transform duration-300">
-            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          <div className="w-24 h-24 mx-auto mb-5 transform hover:scale-105 transition-transform duration-300">
+            <img src="https://snixuzaslqdnbduqmazs.supabase.co/storage/v1/object/public/Asset/Logo%20Apps%20Mobile.png" alt="Anora Logo" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(252,172,4,0.3)]" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-text">Anora Chat</h1>
           <p className="text-text-muted mt-2 text-sm">Masuk dan mulai obrolan seru sekarang.</p>

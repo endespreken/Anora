@@ -1,10 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../config/supabaseClient';
+import { useSettings } from '../contexts/SettingsContext';
 
 export function useGlobalPresence(user, pseudo, joinedSpaces, privateChannels) {
   const [globalOnlineUsers, setGlobalOnlineUsers] = useState([]);
   const channelRef = useRef(null);
   const locationRef = useRef({ lat: null, lng: null });
+  const { incognitoMode } = useSettings();
 
   useEffect(() => {
     if (!user || !pseudo) return;
@@ -27,8 +29,8 @@ export function useGlobalPresence(user, pseudo, joinedSpaces, privateChannels) {
               user_id: user.id,
               pseudo: pseudo,
               online_at: new Date().toISOString(),
-              lat: lat,
-              lng: lng,
+              lat: incognitoMode ? null : lat,
+              lng: incognitoMode ? null : lng,
               spaces: joinedSpaces,
               pms: privateChannels
             });
@@ -60,13 +62,13 @@ export function useGlobalPresence(user, pseudo, joinedSpaces, privateChannels) {
         user_id: user.id,
         pseudo: pseudo,
         online_at: new Date().toISOString(),
-        lat: locationRef.current.lat,
-        lng: locationRef.current.lng,
+        lat: incognitoMode ? null : locationRef.current.lat,
+        lng: incognitoMode ? null : locationRef.current.lng,
         spaces: joinedSpaces,
         pms: privateChannels
       }).catch(err => console.log('Track update error ignored', err));
     }
-  }, [joinedSpaces, privateChannels, user, pseudo]);
+  }, [joinedSpaces, privateChannels, user, pseudo, incognitoMode]);
 
   return { globalOnlineUsers };
 }

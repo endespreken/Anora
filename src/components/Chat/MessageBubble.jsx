@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
-import { Radio, Check, CheckCheck, Reply as ReplyIcon, ChevronDown } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Radio, Check, CheckCheck, Reply as ReplyIcon, SmilePlus, BadgeCheck } from 'lucide-react';
 import emoji from 'react-easy-emoji';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../contexts/SettingsContext';
 
-export default function MessageBubble({ message, isOwn, onReply, onReact, allMessages = [] }) {
-  const [showMenu, setShowMenu] = useState(false);
-  const { pseudo } = useAuth();
+export default function MessageBubble({ message, isOwn, onReply, onReact, allMessages = [], onUserClick }) {
+  const [showMobileReact, setShowMobileReact] = useState(false);
+  const [showWebReact, setShowWebReact] = useState(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const { pseudo, allRegisteredNicks = [], isRegistered } = useAuth();
+  const { vibrationEnabled } = useSettings();
+  
+  const touchStart = useRef({ x: 0, y: 0, time: 0 });
+  const touchCurrent = useRef({ x: 0, y: 0 });
+  const longPressTimer = useRef(null);
+
   const { user_pseudo, content, created_at, is_system_msg, reply_to_id, reactions } = message;
   const time = new Date(created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -25,100 +34,186 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
   const repliedMessage = reply_to_id ? allMessages.find(m => m.id === reply_to_id) : null;
   const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    touchStart.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+    touchCurrent.current = { x: touch.clientX, y: touch.clientY };
+    
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    longPressTimer.current = setTimeout(() => {
+      setShowMobileReact(true);
+      if (vibrationEnabled && window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(50);
+      }
+    }, 500); 
+  };
+
+  const handleTouchMove = (e) => {
+    const touch = e.touches[0];
+    touchCurrent.current = { x: touch.clientX, y: touch.clientY };
+    
+    const dx = touchCurrent.current.x - touchStart.current.x;
+    const dy = touchCurrent.current.y - touchStart.current.y;
+    
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    }
+    
+    if (dx > 0 && Math.abs(dy) < 30) {
+      setSwipeOffset(Math.min(dx, 60));
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    
+    const dx = touchCurrent.current.x - touchStart.current.x;
+    
+    if (dx > 40) {
+      if (onReply) onReply();
+    }
+    setSwipeOffset(0);
+  };
+
+  const reactionTrigger = !showWebReact && !showMobileReact && (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setShowWebReact(true);
+      }}
+      className={`hidden md:group-hover:flex absolute top-1/2 -translate-y-1/2 ${isOwn ? 'right-full mr-2' : 'left-full ml-2'} items-center justify-center w-8 h-8 bg-surface border border-border rounded-full shadow-lg text-textMuted hover:text-primary transition-colors z-20`}
+      title="Add Reaction"
+    >
+      <SmilePlus size={16} />
+    </button>
+  );
+
+  const reactionMenu = (
+    <div className={`${(showMobileReact || showWebReact) ? 'flex z-50' : 'hidden'} absolute top-1/2 -translate-y-1/2 ${isOwn ? 'right-full mr-2' : 'left-full ml-2'} items-center space-x-1 bg-surface border border-border rounded-full shadow-lg p-1 animate-fade-in`}>
+      {quickReactions.map(emo => (
+        <button 
+          key={emo} 
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onReact) onReact(emo);
+            setShowMobileReact(false);
+            setShowWebReact(false);
+          }}
+          className="w-7 h-7 flex items-center justify-center hover:bg-secondary rounded-full transition-colors text-text"
+          title="React"
+        >
+          {emoji(emo)}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div 
-      className={`mb-6 flex ${isOwn ? 'justify-end' : 'justify-start'} animate-slide-up group`}
-      onMouseLeave={() => setShowMenu(false)}
+      className={`mb-6 flex ${isOwn ? 'justify-end' : 'justify-start'} animate-slide-up group relative`}
+      onMouseLeave={() => {
+        setShowMobileReact(false);
+        setShowWebReact(false);
+      }}
     >
-      <div className={`max-w-[75%] flex flex-col relative group ${isOwn ? 'items-end' : 'items-start'}`}>
+      {showMobileReact && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onTouchStart={() => setShowMobileReact(false)}
+          onClick={() => setShowMobileReact(false)}
+        />
+      )}
+
+      <div className={`max-w-[75%] flex flex-col relative ${isOwn ? 'items-end' : 'items-start'}`}>
         
-        {/* Username above bubble - Only for Channels/Spaces */}
         {!isPrivate && (
-          <div className={`text-[11px] text-textMuted mb-1 px-1 flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-            <span className="font-semibold text-text">{user_pseudo}</span>
+          <div className={`text-[11px] text-textMuted mb-1 px-1 flex items-center ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            {isOwn ? (
+              <span className="font-semibold text-text">{user_pseudo}</span>
+            ) : (
+              <button 
+                onClick={() => onUserClick && onUserClick(user_pseudo)}
+                className="font-semibold text-text hover:text-primary hover:underline transition-colors focus:outline-none"
+              >
+                {user_pseudo}
+              </button>
+            )}
+            {((isOwn && isRegistered) || allRegisteredNicks.some(nick => nick.toLowerCase() === user_pseudo.toLowerCase())) && (
+              <BadgeCheck size={13} className="ml-1 text-blue-500 flex-shrink-0" />
+            )}
           </div>
         )}
         
-        {/* The Chat Bubble */}
-        <div className={`px-4 py-2 pt-3 shadow-md relative ${
-          isBeacon 
-            ? 'bg-surface border border-accent text-text rounded-2xl animate-pulse-slow shadow-accent/20'
-            : isOwn 
-              ? 'bg-gradient-to-br from-primary to-primaryHover text-white rounded-2xl rounded-tr-sm shadow-primary/20' 
-              : 'bg-surface border border-border text-text rounded-2xl rounded-tl-sm'
-        }`}>
-          
-          {/* Toggle Button Inside Bubble */}
-          {!is_system_msg && (
-            <button 
-              onClick={() => setShowMenu(!showMenu)}
-              className="absolute top-1 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-current hover:opacity-70 p-1 z-10"
-            >
-              <ChevronDown size={14} />
-            </button>
-          )}
+        <div className="relative flex items-center group">
+          {reactionTrigger}
+          {reactionMenu}
 
-          {/* Action Menu Popover (Responsive positioned inside bubble container) */}
-          {!is_system_msg && showMenu && (
-            <div className={`absolute top-8 ${isOwn ? 'right-2' : 'left-2'} flex items-center space-x-1 bg-surface border border-border rounded-full shadow-lg p-1 z-30 animate-fade-in`}>
-              {quickReactions.map(emo => (
-                <button 
-                  key={emo} 
-                  onClick={() => {
-                    if (onReact) onReact(emo);
-                    setShowMenu(false);
-                  }}
-                  className="w-7 h-7 flex items-center justify-center hover:bg-secondary rounded-full transition-colors text-text"
-                  title="React"
-                >
-                  {emoji(emo)}
-                </button>
-              ))}
-              <div className="w-px h-4 bg-border mx-1"></div>
+          <div 
+            className={`px-4 py-2 pt-3 shadow-md relative w-full ${
+              isBeacon 
+                ? 'bg-surface border border-accent text-text rounded-2xl animate-pulse-slow shadow-accent/20'
+                : isOwn 
+                  ? 'bg-gradient-to-br from-primary to-primaryHover text-white rounded-2xl rounded-tr-sm shadow-primary/20' 
+                  : 'bg-surface border border-border text-text rounded-2xl rounded-tl-sm'
+            }`}
+            style={{ 
+              transform: `translateX(${swipeOffset}px)`,
+              transition: swipeOffset === 0 ? 'transform 0.2s ease-out' : 'none',
+              touchAction: 'pan-y'
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onContextMenu={(e) => {
+              if (window.innerWidth < 768) e.preventDefault();
+            }}
+          >
+            
+            {/* Reply arrow button for Web hover */}
+            {!is_system_msg && (
               <button 
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (onReply) onReply();
-                  setShowMenu(false);
                 }}
-                className="w-7 h-7 flex items-center justify-center text-textMuted hover:text-primary hover:bg-secondary rounded-full transition-colors"
+                className={`hidden md:group-hover:flex absolute top-1 right-2 text-current hover:opacity-70 p-1 z-20 ${isOwn ? 'text-white' : 'text-textMuted hover:text-primary'}`}
                 title="Reply"
               >
                 <ReplyIcon size={14} />
               </button>
-            </div>
-          )}
+            )}
 
-          {isBeacon && (
-            <div className="absolute inset-0 bg-accent/5 pointer-events-none rounded-[inherit]"></div>
-          )}
-          
-          {reply_to_id && (
-            <div className={`mb-2 pl-2 border-l-2 text-xs opacity-80 ${isOwn ? 'border-white/50' : 'border-primary/50'}`}>
-              <div className="font-semibold mb-0.5">{repliedMessage ? repliedMessage.user_pseudo : 'Unknown User'}</div>
-              <div className="whitespace-pre-wrap">
-                {repliedMessage ? repliedMessage.content : 'Message not found'}
-              </div>
-            </div>
-          )}
-          
-          <div className="relative z-10 flex flex-col">
-            <div className="flex items-start pr-4">
-              {isBeacon && <Radio size={16} className="text-accent mr-2 mt-0.5 shrink-0" />}
-              <span className={`leading-relaxed whitespace-pre-wrap break-words ${isBeacon ? 'font-medium' : ''}`}>
-                {isBeacon ? emoji(content.replace('[BEACON SIGNAL]:', '').trim()) : emoji(content)}
-              </span>
-            </div>
+            {isBeacon && (
+              <div className="absolute inset-0 bg-accent/5 pointer-events-none rounded-[inherit]"></div>
+            )}
             
-            {/* Timestamp and Checkmarks Inside Bubble */}
-            <div className={`flex items-center justify-end mt-1 -mb-1 space-x-1 text-[10px] ${isOwn ? 'text-white/70' : 'text-textMuted'}`}>
-              <span>{time}</span>
-              {isOwn && (
-                message.is_read ? (
-                  <CheckCheck size={14} className="text-blue-200 drop-shadow-sm" />
-                ) : (
-                  <Check size={14} className="text-current opacity-80" />
-                )
-              )}
+            {reply_to_id && (
+              <div className={`mb-2 pl-2 border-l-2 text-xs opacity-80 ${isOwn ? 'border-white/50' : 'border-primary/50'}`}>
+                <div className="font-semibold mb-0.5">{repliedMessage ? repliedMessage.user_pseudo : 'Unknown User'}</div>
+                <div className="whitespace-pre-wrap">
+                  {repliedMessage ? repliedMessage.content : 'Message not found'}
+                </div>
+              </div>
+            )}
+            
+            <div className="relative z-10 flex flex-col">
+              <div className="flex items-start pr-4">
+                {isBeacon && <Radio size={16} className="text-accent mr-2 mt-0.5 shrink-0" />}
+                <span className={`leading-relaxed whitespace-pre-wrap break-words ${isBeacon ? 'font-medium' : ''}`}>
+                  {isBeacon ? emoji(content.replace('[BEACON SIGNAL]:', '').trim()) : emoji(content)}
+                </span>
+              </div>
+              
+              <div className={`flex items-center justify-end mt-1 -mb-1 space-x-1 text-[10px] ${isOwn ? 'text-white/70' : 'text-textMuted'}`}>
+                <span>{time}</span>
+                {isOwn && (
+                  message.is_read ? (
+                    <CheckCheck size={14} className="text-blue-200 drop-shadow-sm" />
+                  ) : (
+                    <Check size={14} className="text-current opacity-80" />
+                  )
+                )}
+              </div>
             </div>
           </div>
         </div>

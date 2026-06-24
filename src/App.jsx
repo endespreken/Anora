@@ -7,31 +7,52 @@ import ChatInput from './components/Chat/ChatInput';
 import PinGeneratorModal from './components/Modals/PinGeneratorModal';
 import NearbyUsersModal from './components/Modals/NearbyUsersModal';
 import OnlineUsersModal from './components/Modals/OnlineUsersModal';
+import SettingsModal from './components/Modals/SettingsModal';
 import { useChatRealtime } from './hooks/useChatRealtime';
 import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './config/supabaseClient';
 import { soundManager } from './utils/SoundManager';
-import { markMessagesAsRead, sendMessage, fetchUnreadCountsForUser } from './services/dbServices';
+import { markMessagesAsRead, sendMessage, fetchUnreadCountsForUser, fetchFriends, checkIsFriend } from './services/dbServices';
 import { useGlobalPresence } from './hooks/useGlobalPresence';
+import { useSettings } from './contexts/SettingsContext';
 import Home from './components/Home/Home';
+import { App as CapApp } from '@capacitor/app';
 
 function App() {
   const [currentChannel, setCurrentChannel] = useState('random');
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isNearbyModalOpen, setIsNearbyModalOpen] = useState(false);
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState('pms');
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState({});
-  const [hasJoined, setHasJoined] = useState(false);
   const { user, pseudo, isRegistered } = useAuth();
+  const [hasJoined, setHasJoined] = useState(() => {
+    if (pseudo && !/^Anon\d+$/.test(pseudo)) {
+      return true;
+    }
+    return false;
+  });
   const [privateChannels, setPrivateChannels] = useState([]);
   const [joinedSpaces, setJoinedSpaces] = useState(['random']);
   const [replyingTo, setReplyingTo] = useState(null);
   const [pinnedChannels, setPinnedChannels] = useState([]);
   const [globalTyping, setGlobalTyping] = useState({});
+  const [friends, setFriends] = useState([]);
   const globalChannelRef = useRef(null);
+  const { friendsOnlyPM } = useSettings();
+
+  useEffect(() => {
+    if (user) {
+      const loadFriends = async () => {
+        const friendIds = await fetchFriends(user.id);
+        setFriends(friendIds);
+      };
+      loadFriends();
+    }
+  }, [user]);
   
   // Load channels when pseudo changes
   useEffect(() => {
@@ -100,9 +121,12 @@ function App() {
     } else {
       if (!joinedSpaces.includes(currentChannel)) {
         updateJoinedSpaces(prev => [...prev, currentChannel]);
+        if (pseudo) {
+          sendMessage(currentChannel, 'SYSTEM', `${pseudo} telah bergabung dalam ruangan.`, true);
+        }
       }
     }
-  }, [currentChannel, privateChannels, joinedSpaces]);
+  }, [currentChannel, privateChannels, joinedSpaces, pseudo]);
 
   // Load persistent unread counts
   useEffect(() => {
@@ -197,32 +221,45 @@ function App() {
         const isPMChannel = newMsg.channel_name.startsWith('@') && newMsg.channel_name.includes(pseudo);
         const isAnora = newMsg.user_pseudo.includes('Anora');
 
-        if (newMsg.channel_name === currentChannel) {
-          // Message is in active channel, mark as read immediately
-          markMessagesAsRead(currentChannel, pseudo);
-          localStorage.setItem(`last_read_${pseudo}_${currentChannel}`, Date.now().toString());
-        } else if (isMention || isPMChannel) {
-          // Not active channel, but it's a mention or PM -> Add to unread
-          setUnreadCounts(prev => ({
-            ...prev,
-            [newMsg.channel_name]: (prev[newMsg.channel_name] || 0) + 1
-          }));
-          
-          if (isPMChannel && newMsg.channel_name.startsWith('@')) {
-            updatePrivateChannels(prev => {
-              if (!prev.includes(newMsg.channel_name)) return [...prev, newMsg.channel_name];
-              return prev;
-            });
+        const processMessage = () => {
+          if (newMsg.channel_name === currentChannel) {
+            // Message is in active channel, mark as read immediately
+            markMessagesAsRead(currentChannel, pseudo);
+            localStorage.setItem(`last_read_${pseudo}_${currentChannel}`, Date.now().toString());
+          } else if (isMention || isPMChannel) {
+            // Not active channel, but it's a mention or PM -> Add to unread
+            setUnreadCounts(prev => ({
+              ...prev,
+              [newMsg.channel_name]: (prev[newMsg.channel_name] || 0) + 1
+            }));
+            
+            if (isPMChannel && newMsg.channel_name.startsWith('@')) {
+              updatePrivateChannels(prev => {
+                if (!prev.includes(newMsg.channel_name)) return [...prev, newMsg.channel_name];
+                return prev;
+              });
+            }
           }
-        }
 
-        // Play sounds
-        if (isAnora) {
-          soundManager.playAnora();
-        } else if (isMention || isPMChannel) {
-          soundManager.playReceivePM();
+          // Play sounds
+          if (isAnora) {
+            soundManager.playAnora();
+          } else if (isMention || isPMChannel) {
+            soundManager.playReceivePM();
+          } else {
+            soundManager.playReceiveChannel();
+          }
+        };
+
+        if (isPMChannel && !isAnora && friendsOnlyPM && user) {
+          // Verify friend
+          checkIsFriend(user.id, newMsg.user_id).then(isFriend => {
+            if (isFriend) {
+              processMessage();
+            }
+          });
         } else {
-          soundManager.playReceiveChannel();
+          processMessage();
         }
       })
       .on('broadcast', { event: 'typing' }, (payload) => {
@@ -274,6 +311,42 @@ function App() {
     }
   }, [currentChannel, pseudo]);
 
+  // Capacitor hardware back button handler
+  useEffect(() => {
+    let backButtonListener = null;
+
+    const setupListener = async () => {
+      try {
+        backButtonListener = await CapApp.addListener('backButton', () => {
+          if (isPinModalOpen) {
+            setIsPinModalOpen(false);
+          } else if (isNearbyModalOpen) {
+            setIsNearbyModalOpen(false);
+          } else if (isOnlineModalOpen) {
+            setIsOnlineModalOpen(false);
+          } else if (isSettingsModalOpen) {
+            setIsSettingsModalOpen(false);
+          } else if (isMobileChatOpen) {
+            setIsMobileChatOpen(false);
+          } else {
+            CapApp.exitApp();
+          }
+        });
+      } catch (err) {
+        // Capacitor might throw if not running in a native environment
+        console.warn('Capacitor App plugin not available:', err);
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      if (backButtonListener && typeof backButtonListener.remove === 'function') {
+        backButtonListener.remove();
+      }
+    };
+  }, [isPinModalOpen, isNearbyModalOpen, isOnlineModalOpen, isSettingsModalOpen, isMobileChatOpen]);
+
   const handleMarkAsRead = (channelToMark) => {
     if (pseudo) {
       markMessagesAsRead(channelToMark, pseudo);
@@ -316,7 +389,7 @@ function App() {
     changeChannel(pmChannel);
   };
 
-  const { parseCommand } = useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage);
+  const { parseCommand } = useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage, joinedSpaces, privateChannels);
 
   const globalBroadcastTyping = () => {
     broadcastTyping(); // For current channel
@@ -377,6 +450,8 @@ function App() {
           onPinChat={handlePinChat}
           globalTyping={globalTyping}
           globalOnlineUsers={globalOnlineUsers}
+          friends={friends}
+          onSettingsClick={() => setIsSettingsModalOpen(true)}
         />
         <BottomNav 
           activeTab={activeMobileTab} 
@@ -397,6 +472,7 @@ function App() {
           onBack={() => setIsMobileChatOpen(false)}
           onUserClick={startPrivateMessage}
           onShowMembers={() => setIsOnlineModalOpen(true)}
+          onSettingsClick={() => setIsSettingsModalOpen(true)}
         />
         
         <ChatWindow 
@@ -404,6 +480,7 @@ function App() {
           loading={loading} 
           typingUsers={typingUsers}
           onReply={(msg) => setReplyingTo(msg)}
+          onUserClick={startPrivateMessage}
         />
         
         <div className="sticky bottom-0 w-full z-10">
@@ -435,6 +512,11 @@ function App() {
         onClose={() => setIsOnlineModalOpen(false)}
         onlineUsers={onlineUsers}
         onUserClick={startPrivateMessage}
+      />
+
+      <SettingsModal 
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
       />
     </div>
   );

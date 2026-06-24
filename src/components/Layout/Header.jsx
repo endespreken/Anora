@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Moon, Sun, Hash, Menu, MessageCircle, ArrowLeft, Lock } from 'lucide-react';
+import { Users, Moon, Sun, Hash, Menu, MessageCircle, ArrowLeft, Lock, Settings, MoreVertical } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 
-export default function Header({ currentChannel, onlineUsers = [], onMenuClick, onUserClick, isMobileChatOpen, onBack, onShowMembers }) {
+export default function Header({ currentChannel, onlineUsers = [], onMenuClick, onUserClick, isMobileChatOpen, onBack, onShowMembers, onSettingsClick }) {
   const { theme, toggleTheme } = useTheme();
   const { pseudo } = useAuth();
 
@@ -62,12 +62,15 @@ export default function Header({ currentChannel, onlineUsers = [], onMenuClick, 
           </span>
         </div>
         
+
+
         <button 
-          onClick={toggleTheme}
+          onClick={onSettingsClick}
           className="p-2.5 rounded-full hover:bg-secondary/50 text-textMuted hover:text-text transition-all duration-200 border border-transparent hover:border-border shadow-sm"
-          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          title="Pengaturan"
         >
-          {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          <Settings size={18} className="hidden md:block" />
+          <MoreVertical size={20} className="block md:hidden" />
         </button>
       </div>
     </header>

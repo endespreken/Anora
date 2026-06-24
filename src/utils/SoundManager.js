@@ -13,7 +13,8 @@ class SoundManager {
   }
 
   playTone(frequency, type, duration, vol, startTimeOffset = 0) {
-    if (!this.audioCtx) return;
+    const isSoundEnabled = localStorage.getItem('anora_sound_enabled') !== 'false';
+    if (!isSoundEnabled || !this.audioCtx) return;
     const oscillator = this.audioCtx.createOscillator();
     const gainNode = this.audioCtx.createGain();
     

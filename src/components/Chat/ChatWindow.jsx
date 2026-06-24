@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { MessageSquareDashed } from 'lucide-react';
 import { addReaction } from '../../services/dbServices';
 
-export default function ChatWindow({ messages, loading, typingUsers = [], onReply }) {
+export default function ChatWindow({ messages, loading, typingUsers = [], onReply, onUserClick }) {
   const { pseudo } = useAuth();
   const bottomRef = useRef(null);
 
@@ -43,6 +43,7 @@ export default function ChatWindow({ messages, loading, typingUsers = [], onRepl
               onReply={() => onReply && onReply(msg)}
               onReact={(emoji) => addReaction(msg.id, emoji, pseudo)}
               allMessages={messages}
+              onUserClick={onUserClick}
             />
           ))}
           {typingUsers.length > 0 && (

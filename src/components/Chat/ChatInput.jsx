@@ -103,7 +103,7 @@ export default function ChatInput({ onSendMessage, broadcastTyping, replyingTo, 
             <button 
               type="submit"
               disabled={!text.trim()}
-              className="p-2.5 bg-gradient-to-r from-primary to-accent text-white rounded-full hover:shadow-lg hover:shadow-primary/30 transition-all duration-300 disabled:opacity-50 disabled:hover:shadow-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+              className="p-2.5 bg-primary hover:bg-primaryHover text-white rounded-full hover:shadow-lg hover:shadow-primary/30 transition-all duration-300 disabled:opacity-50 disabled:hover:shadow-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
             >
               <Send size={18} className="ml-0.5" />
             </button>

@@ -1,14 +1,14 @@
 import { useAuth } from '../contexts/AuthContext';
 import { sendMessage, addFriendWithPin, checkNicknameExists, checkEmailExists, registerNickname, verifyNickname } from '../services/dbServices';
 
-export function useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage) {
+export function useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage, joinedSpaces = [], privateChannels = []) {
   const { user, pseudo, changePseudo, isRegistered, markAsRegistered } = useAuth();
 
   const parseCommand = async (text, replyToId = null) => {
     const trimmed = text.trim();
     if (!trimmed.startsWith('/')) {
       // Normal message
-      await sendMessage(currentChannel, pseudo, trimmed, false, replyToId);
+      await sendMessage(currentChannel, pseudo, trimmed, false, replyToId, user.id);
       
       // Anora Bot Auto-Reply (Local Only)
       if (trimmed.toLowerCase().includes('anora')) {
@@ -27,8 +27,9 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
       case 'join':
         if (args) {
           changeChannel(args);
-          // Send local system message or global system message if desired
-          await sendMessage(args, 'SYSTEM', `${pseudo} joined ${args}`, true);
+          // The join message is now handled globally in App.jsx when a new space is joined
+          // so we don't necessarily need to send it here, but if they join via command,
+          // they will enter the channel and the useEffect will trigger it.
         }
         return true;
 
@@ -37,6 +38,11 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
           const nickArgs = args.split(' ');
           const newNick = nickArgs[0];
           const password = nickArgs[1] || '';
+
+          if (newNick.length > 15) {
+            addLocalMessage(`Nickname maksimal 15 karakter termasuk karakter khusus.`);
+            return true;
+          }
 
           const isTaken = await checkNicknameExists(newNick);
           
@@ -50,7 +56,11 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
               const oldPseudo = pseudo;
               changePseudo(newNick, true);
               markAsRegistered();
-              await sendMessage(currentChannel, 'SYSTEM', `${oldPseudo} is now known as ${newNick}`, true);
+              
+              const allChannels = [...new Set([...joinedSpaces, ...privateChannels])];
+              for (const ch of allChannels) {
+                await sendMessage(ch, 'SYSTEM', `${oldPseudo} sudah mengganti nickname menjadi ${newNick}`, true);
+              }
               addLocalMessage(`Berhasil masuk sebagai ${newNick}.`);
             } else {
               addLocalMessage(`Password salah untuk nickname ${newNick}.`);
@@ -58,7 +68,11 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
           } else {
             const oldPseudo = pseudo;
             changePseudo(newNick, false);
-            await sendMessage(currentChannel, 'SYSTEM', `${oldPseudo} is now known as ${newNick}`, true);
+            
+            const allChannels = [...new Set([...joinedSpaces, ...privateChannels])];
+            for (const ch of allChannels) {
+              await sendMessage(ch, 'SYSTEM', `${oldPseudo} sudah mengganti nickname menjadi ${newNick}`, true);
+            }
             addLocalMessage(`Nickname ${newNick} belum terdaftar. Kamu memiliki waktu 5 menit untuk mendaftar menggunakan /register ${newNick} [password] [email], atau namamu akan diacak kembali.`);
           }
         }
@@ -72,6 +86,11 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
             return true;
           }
           const [regNick, regPass, regEmail] = regArgs;
+          
+          if (regNick.length > 15) {
+            addLocalMessage(`Nickname maksimal 15 karakter termasuk karakter khusus.`);
+            return true;
+          }
           
           const nickExists = await checkNicknameExists(regNick);
           if (nickExists) {
@@ -102,7 +121,7 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
         if (args) {
           // A special formatted message
           const beaconContent = `[BEACON SIGNAL]: ${args}`;
-          await sendMessage(currentChannel, pseudo, beaconContent);
+          await sendMessage(currentChannel, pseudo, beaconContent, false, null, user.id);
         }
         return true;
 
@@ -118,7 +137,7 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
         return true;
         
       case 'help':
-        await sendMessage(currentChannel, pseudo, "/help"); // Menampilkan command yang diketik user
+        await sendMessage(currentChannel, pseudo, "/help", false, null, user.id); // Menampilkan command yang diketik user
         setTimeout(() => {
           const helpText = `Hai! Saya Anora 🤖. Berikut perintah yang bisa kamu gunakan:
 

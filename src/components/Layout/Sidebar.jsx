@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Hash, Radar, UserPlus, Zap, MapPin, X, Lock, Pin, MessageCircle } from 'lucide-react';
+import { Hash, Radar, UserPlus, Zap, MapPin, X, Lock, Pin, MessageCircle, BadgeCheck, MoreVertical } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { fetchFriends } from '../../services/dbServices';
 
 export default function Sidebar({ 
@@ -8,11 +9,12 @@ export default function Sidebar({
   unreadCounts = {}, privateChannels = [], closePrivateChannel, 
   joinedSpaces = ['random'], closeSpace, activeMobileTab = 'pms', 
   onMarkAsRead, pinnedChannels = [], onPinChat, globalTyping = {},
-  globalOnlineUsers = []
+  globalOnlineUsers = [], friends = [], onSettingsClick
 }) {
-  const { user, pseudo } = useAuth();
-  const [friends, setFriends] = useState([]);
+  const { user, pseudo, allRegisteredNicks = [] } = useAuth();
   const [contextMenu, setContextMenu] = useState(null);
+  const [isConnectionsModalOpen, setIsConnectionsModalOpen] = useState(false);
+  const { vibrationEnabled } = useSettings();
 
   const sortedSpaces = [...joinedSpaces].sort((a, b) => {
     const aPinned = pinnedChannels.includes(a);
@@ -38,7 +40,7 @@ export default function Sidebar({
     isLongPress.current = false;
     pressTimer.current = setTimeout(() => {
       isLongPress.current = true;
-      if (window.navigator && window.navigator.vibrate) {
+      if (vibrationEnabled && window.navigator && window.navigator.vibrate) {
         window.navigator.vibrate(50); // Haptic feedback on mobile
       }
       setContextMenu({ channel, isSpace });
@@ -57,25 +59,22 @@ export default function Sidebar({
     }
   };
 
-  useEffect(() => {
-    if (user) {
-      const loadFriends = async () => {
-        const friendIds = await fetchFriends(user.id);
-        setFriends(friendIds);
-      };
-      loadFriends();
-    }
-  }, [user]);
-
   return (
     <div className="w-full md:w-72 glass-panel h-[100dvh] flex flex-col border-r border-border border-y-0 border-l-0">
       <div className="p-6 border-b border-border flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
-            <Zap size={20} className="text-white" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden drop-shadow-sm">
+            <img src="https://snixuzaslqdnbduqmazs.supabase.co/storage/v1/object/public/Asset/Logo%20Apps%20Mobile.png" alt="Anora Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="font-bold text-2xl tracking-tight text-text">Anora</h1>
         </div>
+        <button 
+          onClick={onSettingsClick}
+          className="md:hidden p-2 text-textMuted hover:text-text transition-colors"
+          title="Pengaturan"
+        >
+          <MoreVertical size={20} />
+        </button>
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 md:space-y-8 pb-20 md:pb-4">
@@ -176,6 +175,7 @@ export default function Sidebar({
                 
                 const parts = channel.replace('@', '').split('-');
                 const targetUser = parts.find(p => p !== pseudo) || parts[0];
+                const isTargetRegistered = allRegisteredNicks.some(nick => nick.toLowerCase() === targetUser.toLowerCase());
 
                 return (
                   <li key={channel} className="group relative">
@@ -200,6 +200,7 @@ export default function Sidebar({
                       <div className="flex flex-col items-start overflow-hidden mr-2 flex-1 text-left">
                         <div className="flex items-center w-full">
                           <span className="capitalize truncate">{targetUser}</span>
+                          {isTargetRegistered && <BadgeCheck size={14} className="ml-1 text-blue-500 flex-shrink-0" />}
                           {isPinned && <Pin size={12} className="ml-1.5 text-primary flex-shrink-0" />}
                         </div>
                         {isTyping && <span className="text-[10px] text-green-500 font-medium animate-pulse mt-0.5">Typing...</span>}
@@ -227,33 +228,12 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* CONNECTIONS */}
-        <div className={activeMobileTab === 'connections' ? 'block' : 'hidden md:block'}>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3 px-2 md:mt-0 mt-2">
-            <h2 className="hidden md:block text-xs font-bold uppercase tracking-wider text-textMuted">
-              Connections
-            </h2>
+        {/* CONNECTIONS (Mobile Only) */}
+        <div className={activeMobileTab === 'connections' ? 'block md:hidden' : 'hidden'}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3 px-2 mt-2">
             
-            {/* Desktop Action Icons */}
-            <div className="hidden md:flex items-center space-x-1">
-              <button 
-                onClick={openNearbyModal}
-                className="text-textMuted hover:text-primary transition-colors bg-secondary/50 p-1.5 rounded-lg"
-                title="Nearby Users"
-              >
-                <MapPin size={16} />
-              </button>
-              <button 
-                onClick={openPinModal}
-                className="text-textMuted hover:text-primary transition-colors bg-secondary/50 p-1.5 rounded-lg"
-                title="Add Connection"
-              >
-                <UserPlus size={16} />
-              </button>
-            </div>
-
             {/* Mobile CTAs */}
-            <div className="md:hidden flex flex-col space-y-2 mb-4 mt-2 w-full">
+            <div className="flex flex-col space-y-2 mb-4 mt-2 w-full">
               <button 
                 onClick={openNearbyModal}
                 className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-gradient-to-r from-primary to-accent text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-opacity"
@@ -290,10 +270,86 @@ export default function Sidebar({
         </div>
       </div>
       
-      <div className="hidden md:flex p-4 border-t border-border items-center justify-between text-xs text-textMuted">
+      {/* Web-only Connections Trigger */}
+      <button 
+        onClick={() => setIsConnectionsModalOpen(true)}
+        className="hidden md:flex w-full p-4 border-t border-border items-center justify-between text-textMuted hover:text-text hover:bg-secondary/20 transition-colors focus:outline-none"
+      >
+        <div className="flex items-center font-bold text-xs uppercase tracking-wider">
+          <UserPlus size={16} className="mr-2" />
+          Connections
+        </div>
+        <div className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
+          {friends.length}
+        </div>
+      </button>
+
+      <div className="hidden md:flex p-4 border-t border-border items-center justify-between text-xs text-textMuted bg-background">
         <span>Anora Web</span>
         <span className="flex items-center"><span className="w-1.5 h-1.5 rounded-full bg-primary mr-1.5"></span> Online</span>
       </div>
+
+      {/* Connections Modal for Web */}
+      {isConnectionsModalOpen && (
+        <div className="hidden md:flex fixed inset-0 z-[200] items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in" onClick={() => setIsConnectionsModalOpen(false)}>
+          <div className="bg-surface w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-border animate-scale-up" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-secondary/30">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-primary/10 text-primary rounded-xl">
+                  <UserPlus size={20} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-text">Connections</h2>
+                  <p className="text-xs text-textMuted">{friends.length} friends</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsConnectionsModalOpen(false)}
+                className="p-2 text-textMuted hover:text-accent bg-secondary/50 hover:bg-accent/10 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+              <div className="flex space-x-2">
+                <button 
+                  onClick={() => { setIsConnectionsModalOpen(false); openNearbyModal(); }}
+                  className="flex-1 flex items-center justify-center py-2.5 bg-gradient-to-r from-primary to-accent text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-opacity"
+                >
+                  <MapPin size={16} className="mr-2" />
+                  Cari Teman
+                </button>
+                <button 
+                  onClick={() => { setIsConnectionsModalOpen(false); openPinModal(); }}
+                  className="flex-1 flex items-center justify-center py-2.5 bg-surface text-text font-bold rounded-xl border border-border hover:bg-secondary/50 transition-colors"
+                >
+                  <UserPlus size={16} className="mr-2" />
+                  Tambah
+                </button>
+              </div>
+
+              {friends.length === 0 ? (
+                <div className="px-3 py-6 text-sm text-textMuted text-center bg-secondary/30 rounded-xl border border-dashed border-border">
+                  No connections yet.
+                </div>
+              ) : (
+                <ul className="space-y-1">
+                  {friends.map((friendId, idx) => (
+                    <li key={idx} className="px-3 py-3 rounded-xl text-sm text-text flex items-center hover:bg-secondary/30 transition-colors cursor-default">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-border flex items-center justify-center mr-3 shadow-inner">
+                        <Radar size={16} className="text-textMuted" />
+                      </div>
+                      <span className="font-medium">User_{friendId.substring(0, 4)}</span>
+                      <span className="ml-auto w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Context Menu Modal */}
       {contextMenu && (

@@ -1,9 +1,9 @@
 import React from 'react';
-import { Users, X, MessageCircle } from 'lucide-react';
+import { Users, X, MessageCircle, BadgeCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function OnlineUsersModal({ isOpen, onClose, onlineUsers, onUserClick }) {
-  const { pseudo } = useAuth();
+  const { pseudo, allRegisteredNicks = [], isRegistered } = useAuth();
 
   if (!isOpen) return null;
 
@@ -51,8 +51,11 @@ export default function OnlineUsersModal({ isOpen, onClose, onlineUsers, onUserC
                   >
                     <div className="flex items-center">
                       <span className="w-2.5 h-2.5 rounded-full bg-green-500 mr-3 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
-                      <span className={`text-sm ${u.pseudo === pseudo ? 'font-semibold text-text' : 'text-textMuted group-hover:text-text'}`}>
+                      <span className={`text-sm flex items-center ${u.pseudo === pseudo ? 'font-semibold text-text' : 'text-textMuted group-hover:text-text'}`}>
                         {u.pseudo} {u.pseudo === pseudo && '(You)'}
+                        {((u.pseudo === pseudo && isRegistered) || allRegisteredNicks.some(nick => nick.toLowerCase() === u.pseudo.toLowerCase())) && (
+                          <BadgeCheck size={14} className="ml-1 text-blue-500 flex-shrink-0" />
+                        )}
                       </span>
                     </div>
                     {u.pseudo !== pseudo && (

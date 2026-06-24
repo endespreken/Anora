@@ -1,7 +1,8 @@
 import { supabase } from '../config/supabaseClient';
 
-export const sendMessage = async (channel, pseudo, content, isSystem = false, replyToId = null) => {
+export const sendMessage = async (channel, pseudo, content, isSystem = false, replyToId = null, userId = null) => {
   const insertData = { channel_name: channel, user_pseudo: pseudo, content, is_system_msg: isSystem };
+  if (userId) insertData.user_id = userId;
   if (replyToId) insertData.reply_to_id = replyToId;
 
   const { data, error } = await supabase
@@ -126,6 +127,21 @@ export const fetchFriends = async (userId) => {
   // Extract the friend IDs
   const friendIds = data.map(link => link.user_a_id === userId ? link.user_b_id : link.user_a_id);
   return friendIds;
+};
+
+export const checkIsFriend = async (myUserId, targetUserId) => {
+  if (!myUserId || !targetUserId) return false;
+  const { data, error } = await supabase
+    .from('friend_links')
+    .select('id')
+    .or(`and(user_a_id.eq.${myUserId},user_b_id.eq.${targetUserId}),and(user_a_id.eq.${targetUserId},user_b_id.eq.${myUserId})`)
+    .maybeSingle();
+    
+  if (error) {
+    console.error("Error checking friend status:", error);
+    return false;
+  }
+  return !!data;
 };
 
 // --- New logic for Registration ---
