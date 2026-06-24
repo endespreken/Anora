@@ -220,14 +220,24 @@ function App() {
         const isMention = newMsg.content.includes(`@${pseudo}`);
         const isPMChannel = newMsg.channel_name.startsWith('@') && newMsg.channel_name.includes(pseudo);
         const isAnora = newMsg.user_pseudo.includes('Anora');
+        
+        // Cek apakah channel adalah space yang kita ikuti
+        const savedSpaces = JSON.parse(localStorage.getItem(`anora_spaces_${pseudo}`) || '["random"]');
+        const isJoinedSpace = !newMsg.channel_name.startsWith('@') && savedSpaces.includes(newMsg.channel_name);
+
+        // Abaikan PM yang bukan untuk kita
+        if (newMsg.channel_name.startsWith('@') && !isPMChannel) return;
+
+        // Abaikan pesan dari space yang tidak kita ikuti (kecuali kita dimention)
+        if (!newMsg.channel_name.startsWith('@') && !isJoinedSpace && !isMention) return;
 
         const processMessage = () => {
           if (newMsg.channel_name === currentChannel) {
             // Message is in active channel, mark as read immediately
             markMessagesAsRead(currentChannel, pseudo);
             localStorage.setItem(`last_read_${pseudo}_${currentChannel}`, Date.now().toString());
-          } else if (isMention || isPMChannel) {
-            // Not active channel, but it's a mention or PM -> Add to unread
+          } else {
+            // Not active channel, Add to unread
             setUnreadCounts(prev => ({
               ...prev,
               [newMsg.channel_name]: (prev[newMsg.channel_name] || 0) + 1
@@ -244,8 +254,10 @@ function App() {
           // Play sounds
           if (isAnora) {
             soundManager.playAnora();
-          } else if (isMention || isPMChannel) {
+          } else if (isPMChannel) {
             soundManager.playReceivePM();
+          } else if (isMention) {
+            soundManager.playReceivePM(); // Same sound for mention
           } else {
             soundManager.playReceiveChannel();
           }

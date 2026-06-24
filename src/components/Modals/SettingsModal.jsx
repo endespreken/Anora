@@ -235,6 +235,17 @@ export default function SettingsModal({ isOpen, onClose }) {
 
           </div>
         </div>
+        
+        {/* Footer */}
+        <div className="p-4 border-t border-border bg-secondary/10 flex justify-end">
+          <button 
+            onClick={() => window.location.reload()}
+            className="flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-primary to-accent text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-opacity"
+          >
+            <Save size={18} />
+            <span>Simpan</span>
+          </button>
+        </div>
       </div>
     </div>
   );
