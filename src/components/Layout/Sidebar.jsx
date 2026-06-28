@@ -10,7 +10,7 @@ export default function Sidebar({
   unreadCounts = {}, privateChannels = [], closePrivateChannel, 
   joinedSpaces = ['random'], closeSpace, activeMobileTab = 'pms', 
   onMarkAsRead, pinnedChannels = [], onPinChat, globalTyping = {},
-  globalOnlineUsers = [], friends = [], friendNicks = [], onSettingsClick
+  globalOnlineUsers = [], friends = [], friendNicks = [], onSettingsClick, onReply
 }) {
   const { user, pseudo, allRegisteredNicks = [] } = useAuth();
   const [contextMenu, setContextMenu] = useState(null);
@@ -78,7 +78,7 @@ export default function Sidebar({
         </button>
       </div>
       
-      <VibesBar friendNicks={friendNicks} />
+      <VibesBar friendNicks={friendNicks} onReply={onReply} />
       
       <div className="flex-1 overflow-y-auto p-4 md:space-y-8 pb-20 md:pb-4">
         
