@@ -250,21 +250,27 @@ export default function Sidebar({
               </button>
             </div>
           </div>
-          {friends.length === 0 ? (
+          {friends.filter(fId => globalOnlineUsers.some(u => u.user_id === fId)).length === 0 ? (
             <div className="px-3 py-4 text-sm text-textMuted text-center bg-secondary/30 rounded-xl border border-dashed border-border">
-              No connections yet.
+              Tidak ada teman yang sedang online.
             </div>
           ) : (
             <ul className="space-y-1">
-              {friends.map((friendId, idx) => (
-                <li key={idx} className="px-3 py-2 rounded-xl text-sm text-text flex items-center hover:bg-secondary/30 transition-colors cursor-default">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-secondary to-border flex items-center justify-center mr-3 shadow-inner">
-                    <Radar size={14} className="text-textMuted" />
-                  </div>
-                  User_{friendId.substring(0, 4)}
-                  <span className="ml-auto w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
-                </li>
-              ))}
+              {friends.reduce((acc, friendId) => {
+                const onlineUser = globalOnlineUsers.find(u => u.user_id === friendId);
+                if (onlineUser) {
+                  acc.push(
+                    <li key={friendId} className="px-3 py-2 rounded-xl text-sm text-text flex items-center hover:bg-secondary/30 transition-colors cursor-default">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-secondary to-border flex items-center justify-center mr-3 shadow-inner">
+                        <Radar size={14} className="text-textMuted" />
+                      </div>
+                      <span className="font-semibold">{onlineUser.pseudo}</span>
+                      <span className="ml-auto w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
+                    </li>
+                  );
+                }
+                return acc;
+              }, [])}
             </ul>
           )}
         </div>
@@ -280,7 +286,7 @@ export default function Sidebar({
           Connections
         </div>
         <div className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
-          {friends.length}
+          {friends.filter(fId => globalOnlineUsers.some(u => u.user_id === fId)).length} / {friends.length}
         </div>
       </button>
 
@@ -329,21 +335,27 @@ export default function Sidebar({
                 </button>
               </div>
 
-              {friends.length === 0 ? (
+              {friends.filter(fId => globalOnlineUsers.some(u => u.user_id === fId)).length === 0 ? (
                 <div className="px-3 py-6 text-sm text-textMuted text-center bg-secondary/30 rounded-xl border border-dashed border-border">
-                  No connections yet.
+                  Tidak ada teman yang sedang online.
                 </div>
               ) : (
                 <ul className="space-y-1">
-                  {friends.map((friendId, idx) => (
-                    <li key={idx} className="px-3 py-3 rounded-xl text-sm text-text flex items-center hover:bg-secondary/30 transition-colors cursor-default">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-border flex items-center justify-center mr-3 shadow-inner">
-                        <Radar size={16} className="text-textMuted" />
-                      </div>
-                      <span className="font-medium">User_{friendId.substring(0, 4)}</span>
-                      <span className="ml-auto w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
-                    </li>
-                  ))}
+                  {friends.reduce((acc, friendId) => {
+                    const onlineUser = globalOnlineUsers.find(u => u.user_id === friendId);
+                    if (onlineUser) {
+                      acc.push(
+                        <li key={friendId} className="px-3 py-3 rounded-xl text-sm text-text flex items-center hover:bg-secondary/30 transition-colors cursor-default">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-border flex items-center justify-center mr-3 shadow-inner">
+                            <Radar size={16} className="text-textMuted" />
+                          </div>
+                          <span className="font-bold text-base">{onlineUser.pseudo}</span>
+                          <span className="ml-auto w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
+                        </li>
+                      );
+                    }
+                    return acc;
+                  }, [])}
                 </ul>
               )}
             </div>

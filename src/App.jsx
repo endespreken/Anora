@@ -13,7 +13,7 @@ import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './config/supabaseClient';
 import { soundManager } from './utils/SoundManager';
-import { markMessagesAsRead, sendMessage, fetchUnreadCountsForUser, fetchFriends, checkIsFriend } from './services/dbServices';
+import { markMessagesAsRead, sendMessage, fetchUnreadCountsForUser, fetchFriends, checkIsFriend, fetchFollowedChannels, toggleFollowChannel } from './services/dbServices';
 import { useGlobalPresence } from './hooks/useGlobalPresence';
 import { useSettings } from './contexts/SettingsContext';
 import Home from './components/Home/Home';
@@ -41,6 +41,7 @@ function App() {
   const [pinnedChannels, setPinnedChannels] = useState([]);
   const [globalTyping, setGlobalTyping] = useState({});
   const [friends, setFriends] = useState([]);
+  const [followedChannels, setFollowedChannels] = useState([]);
   const globalChannelRef = useRef(null);
   const { friendsOnlyPM } = useSettings();
 
@@ -62,14 +63,29 @@ function App() {
       else setPrivateChannels([]);
 
       const savedSpaces = localStorage.getItem(`anora_spaces_${pseudo}`);
-      if (savedSpaces) setJoinedSpaces(JSON.parse(savedSpaces));
+      if (savedSpaces) setJoinedSpaces(JSON.parse(savedSpaces).map(s => s.toLowerCase()));
       else setJoinedSpaces(['random']);
 
       const savedPinned = localStorage.getItem(`anora_pinned_${pseudo}`);
-      if (savedPinned) setPinnedChannels(JSON.parse(savedPinned));
+      if (savedPinned) setPinnedChannels(JSON.parse(savedPinned).map(c => c.startsWith('@') ? c : c.toLowerCase()));
       else setPinnedChannels([]);
+
+      if (isRegistered) {
+        fetchFollowedChannels(pseudo).then(channels => {
+          setFollowedChannels(channels);
+          if (channels && channels.length > 0) {
+            setJoinedSpaces(prev => {
+              const merged = [...new Set([...prev, ...channels])];
+              localStorage.setItem(`anora_spaces_${pseudo}`, JSON.stringify(merged));
+              return merged;
+            });
+          }
+        });
+      } else {
+        setFollowedChannels([]);
+      }
     }
-  }, [pseudo]);
+  }, [pseudo, isRegistered]);
 
   const handlePinChat = (channel) => {
     setPinnedChannels(prev => {
@@ -119,10 +135,11 @@ function App() {
         updatePrivateChannels(prev => [...prev, currentChannel]);
       }
     } else {
-      if (!joinedSpaces.includes(currentChannel)) {
-        updateJoinedSpaces(prev => [...prev, currentChannel]);
+      const formattedChannel = currentChannel.toLowerCase();
+      if (!joinedSpaces.includes(formattedChannel)) {
+        updateJoinedSpaces(prev => [...prev, formattedChannel]);
         if (pseudo) {
-          sendMessage(currentChannel, 'SYSTEM', `${pseudo} telah bergabung dalam ruangan.`, true);
+          sendMessage(formattedChannel, 'SYSTEM', `${pseudo} telah bergabung dalam ruangan.`, true);
         }
       }
     }
@@ -384,9 +401,33 @@ function App() {
   };
 
   const changeChannel = (newChannel) => {
-    setCurrentChannel(newChannel);
+    // If not a PM channel, make it lowercase to ensure case-insensitive matching
+    const formattedChannel = newChannel.startsWith('@') ? newChannel : newChannel.toLowerCase();
+    setCurrentChannel(formattedChannel);
     setIsMobileChatOpen(true); // Open chat view on mobile
     setReplyingTo(null);
+  };
+
+  const handleToggleFollow = async () => {
+    if (!isRegistered || currentChannel.startsWith('@')) return;
+    
+    const channelName = currentChannel;
+    const isCurrentlyFollowing = followedChannels.includes(channelName);
+    const intentToFollow = !isCurrentlyFollowing;
+    
+    // Optimistic update
+    setFollowedChannels(prev => 
+      intentToFollow ? [...prev, channelName] : prev.filter(c => c !== channelName)
+    );
+
+    const success = await toggleFollowChannel(pseudo, channelName, intentToFollow);
+    
+    if (!success) {
+      // Revert if failed
+      setFollowedChannels(prev => 
+        !intentToFollow ? [...prev, channelName] : prev.filter(c => c !== channelName)
+      );
+    }
   };
 
   const openPinModal = () => setIsPinModalOpen(true);
@@ -485,6 +526,8 @@ function App() {
           onUserClick={startPrivateMessage}
           onShowMembers={() => setIsOnlineModalOpen(true)}
           onSettingsClick={() => setIsSettingsModalOpen(true)}
+          isFollowing={followedChannels.includes(currentChannel)}
+          onToggleFollow={handleToggleFollow}
         />
         
         <ChatWindow 

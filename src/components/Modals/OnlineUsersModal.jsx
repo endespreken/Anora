@@ -53,7 +53,7 @@ export default function OnlineUsersModal({ isOpen, onClose, onlineUsers, onUserC
                       <span className="w-2.5 h-2.5 rounded-full bg-green-500 mr-3 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
                       <span className={`text-sm flex items-center ${u.pseudo === pseudo ? 'font-semibold text-text' : 'text-textMuted group-hover:text-text'}`}>
                         {u.pseudo} {u.pseudo === pseudo && '(You)'}
-                        {((u.pseudo === pseudo && isRegistered) || allRegisteredNicks.some(nick => nick.toLowerCase() === u.pseudo.toLowerCase())) && (
+                        {allRegisteredNicks.some(nick => nick.toLowerCase() === u.pseudo.toLowerCase()) && (
                           <BadgeCheck size={14} className="ml-1 text-blue-500 flex-shrink-0" />
                         )}
                       </span>

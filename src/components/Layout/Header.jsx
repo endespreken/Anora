@@ -1,11 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Moon, Sun, Hash, Menu, MessageCircle, ArrowLeft, Lock, Settings, MoreVertical } from 'lucide-react';
+import { Users, Moon, Sun, Hash, Menu, MessageCircle, ArrowLeft, Lock, Settings, MoreVertical, Bookmark, BookmarkCheck } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 
-export default function Header({ currentChannel, onlineUsers = [], onMenuClick, onUserClick, isMobileChatOpen, onBack, onShowMembers, onSettingsClick }) {
+export default function Header({ 
+  currentChannel, onlineUsers = [], onMenuClick, onUserClick, 
+  isMobileChatOpen, onBack, onShowMembers, onSettingsClick,
+  isFollowing, onToggleFollow 
+}) {
   const { theme, toggleTheme } = useTheme();
-  const { pseudo } = useAuth();
+  const { pseudo, isRegistered } = useAuth();
 
   const isPrivateChannel = currentChannel.startsWith('@');
   const displayChannelName = isPrivateChannel
@@ -62,7 +66,19 @@ export default function Header({ currentChannel, onlineUsers = [], onMenuClick, 
           </span>
         </div>
         
-
+        {!isPrivateChannel && isRegistered && (
+          <button 
+            onClick={onToggleFollow}
+            className={`p-2 rounded-full transition-all duration-200 border shadow-sm ${
+              isFollowing 
+                ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30' 
+                : 'bg-secondary/30 text-textMuted border-transparent hover:text-text hover:border-border hover:bg-secondary/50'
+            }`}
+            title={isFollowing ? "Unfollow Channel" : "Follow Channel"}
+          >
+            {isFollowing ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+          </button>
+        )}
 
         <button 
           onClick={onSettingsClick}

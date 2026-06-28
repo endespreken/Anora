@@ -5,7 +5,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export default function SettingsModal({ isOpen, onClose }) {
-  const { pseudo, isRegistered, allRegisteredNicks } = useAuth();
+  const { pseudo, isRegistered, allRegisteredNicks, permanentPin } = useAuth();
   const { 
     soundEnabled, setSoundEnabled, 
     incognitoMode, setIncognitoMode,
@@ -90,6 +90,21 @@ export default function SettingsModal({ isOpen, onClose }) {
                     </div>
                   </div>
                 </div>
+
+                {isRegistered && permanentPin && (
+                  <div className="p-4 bg-accent/10 rounded-2xl border border-accent/20">
+                    <h3 className="font-bold text-sm text-text mb-2 flex items-center">
+                      <BadgeCheck size={16} className="text-accent mr-2" />
+                      PIN Permanen Anda
+                    </h3>
+                    <p className="text-xs text-textMuted mb-3 leading-relaxed">
+                      Gunakan PIN ini untuk bertukar kontak dengan teman (Add Connection). PIN ini tidak akan pernah berubah.
+                    </p>
+                    <div className="flex items-center justify-center p-3 bg-background rounded-xl border border-border shadow-inner">
+                      <span className="font-mono text-2xl tracking-[0.3em] text-accent font-bold uppercase">{permanentPin}</span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20">
                   <h3 className="font-bold text-sm text-text mb-2">Ganti Nickname / Register</h3>

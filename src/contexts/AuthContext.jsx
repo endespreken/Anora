@@ -24,6 +24,19 @@ export function AuthProvider({ children }) {
   const timerRef = React.useRef(null);
 
   const [allRegisteredNicks, setAllRegisteredNicks] = useState([]);
+  const [permanentPin, setPermanentPin] = useState(null);
+
+  useEffect(() => {
+    if (isRegistered && pseudo) {
+      import('../services/dbServices').then(({ fetchUserPin }) => {
+        fetchUserPin(pseudo).then(pin => {
+          setPermanentPin(pin);
+        });
+      });
+    } else {
+      setPermanentPin(null);
+    }
+  }, [isRegistered, pseudo]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -107,7 +120,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, pseudo, changePseudo, isRegistered, markAsRegistered, loading, allRegisteredNicks }}>
+    <AuthContext.Provider value={{ user, pseudo, changePseudo, isRegistered, markAsRegistered, loading, allRegisteredNicks, permanentPin }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -51,7 +51,7 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
               addLocalMessage(`Nickname ${newNick} sudah terdaftar. Silakan verifikasi dengan: /nick ${newNick} [password]`);
               return true;
             }
-            const isVerified = await verifyNickname(newNick, password);
+            const isVerified = await verifyNickname(newNick, password, user.id);
             if (isVerified) {
               const oldPseudo = pseudo;
               changePseudo(newNick, true);
@@ -104,11 +104,11 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
             return true;
           }
           
-          const success = await registerNickname(regNick, regPass, regEmail);
-          if (success) {
+          const pinCode = await registerNickname(regNick, regPass, regEmail, user.id);
+          if (pinCode) {
             changePseudo(regNick, true);
             markAsRegistered();
-            addLocalMessage(`Selamat! Nickname ${regNick} berhasil didaftarkan dan kamu sudah diverifikasi.`);
+            addLocalMessage(`Selamat! Nickname ${regNick} berhasil didaftarkan dan kamu sudah diverifikasi. PIN Permanen kamu adalah: ${pinCode}. Kamu bisa melihatnya di menu pengaturan.`);
           } else {
             addLocalMessage('Terjadi kesalahan saat mendaftar. Silakan coba lagi nanti.');
           }

@@ -77,7 +77,34 @@ export const generatePin = async (userId) => {
 };
 
 export const addFriendWithPin = async (userId, pin) => {
-  // Find the pin
+  // Check permanent pin first
+  const { data: permData, error: permError } = await supabase
+    .from('registered_users')
+    .select('user_id')
+    .eq('pin_code', pin)
+    .maybeSingle();
+
+  if (!permError && permData && permData.user_id) {
+    if (permData.user_id === userId) {
+      return { success: false, message: "You cannot add yourself" };
+    }
+    
+    // Create friend link
+    const { error: linkError } = await supabase
+      .from('friend_links')
+      .insert([
+        { user_a_id: userId, user_b_id: permData.user_id }
+      ]);
+
+    if (linkError) {
+      console.error("Error creating friend link", linkError);
+      return { success: false, message: "Error creating friend link or already friends" };
+    }
+
+    return { success: true, message: "Connection added successfully via Permanent PIN" };
+  }
+
+  // Find the temp pin
   const { data: pinData, error: pinError } = await supabase
     .from('temp_pins')
     .select('*')
@@ -109,7 +136,7 @@ export const addFriendWithPin = async (userId, pin) => {
   // Optionally delete the pin so it can't be reused
   await supabase.from('temp_pins').delete().eq('pin_code', pin);
 
-  return { success: true, message: "Friend added to Radar successfully" };
+  return { success: true, message: "Connection added successfully" };
 };
 
 export const fetchFriends = async (userId) => {
@@ -176,31 +203,110 @@ export const checkEmailExists = async (email) => {
   return !!data;
 };
 
-export const registerNickname = async (nickname, password, email) => {
+export const registerNickname = async (nickname, password, email, userId) => {
   const passwordHash = await hashPassword(password);
-  const { error } = await supabase
+  
+  // Generate permanent PIN (6 chars, lowercase alphanumeric)
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let pinCode = '';
+  for (let i = 0; i < 6; i++) {
+    pinCode += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+
+  const { data, error } = await supabase
     .from('registered_users')
     .insert([
-      { nickname, email, password_hash: passwordHash }
-    ]);
+      { nickname, email, password_hash: passwordHash, user_id: userId, pin_code: pinCode }
+    ])
+    .select('pin_code')
+    .maybeSingle();
     
-  if (error) {
+  if (error || !data) {
     console.error("Error registering nickname:", error);
-    return false;
+    return null;
   }
-  return true;
+  return data.pin_code;
 };
 
-export const verifyNickname = async (nickname, password) => {
+export const verifyNickname = async (nickname, password, currentUserId) => {
   const passwordHash = await hashPassword(password);
   const { data, error } = await supabase
     .from('registered_users')
-    .select('password_hash')
+    .select('password_hash, user_id')
     .ilike('nickname', nickname)
     .maybeSingle();
     
   if (error || !data) return false;
-  return data.password_hash === passwordHash;
+  
+  if (data.password_hash === passwordHash) {
+    // If successful and currentUserId is provided, update user_id and migrate friends
+    if (currentUserId && data.user_id !== currentUserId) {
+      const oldUserId = data.user_id;
+      
+      // Update registered_users
+      await supabase
+        .from('registered_users')
+        .update({ user_id: currentUserId })
+        .ilike('nickname', nickname);
+        
+      // Migrate friend_links (don't wait for these, let them run in background)
+      if (oldUserId) {
+         supabase.from('friend_links').update({ user_a_id: currentUserId }).eq('user_a_id', oldUserId).then();
+         supabase.from('friend_links').update({ user_b_id: currentUserId }).eq('user_b_id', oldUserId).then();
+      }
+    }
+    return true;
+  }
+  return false;
+};
+
+export const fetchUserPin = async (nickname) => {
+  if (!nickname) return null;
+  const { data, error } = await supabase
+    .from('registered_users')
+    .select('pin_code')
+    .ilike('nickname', nickname)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.pin_code;
+};
+
+export const fetchFollowedChannels = async (nickname) => {
+  if (!nickname) return [];
+  const { data, error } = await supabase
+    .from('registered_users')
+    .select('followed_channels')
+    .ilike('nickname', nickname)
+    .maybeSingle();
+  
+  if (error || !data) return [];
+  return data.followed_channels || [];
+};
+
+export const toggleFollowChannel = async (nickname, channel, isFollowing) => {
+  if (!nickname || !channel) return false;
+  
+  // First fetch current followed channels
+  const currentChannels = await fetchFollowedChannels(nickname);
+  
+  let newChannels;
+  if (isFollowing) {
+    if (currentChannels.includes(channel)) return true; // Already following
+    newChannels = [...currentChannels, channel];
+  } else {
+    newChannels = currentChannels.filter(c => c !== channel);
+  }
+  
+  const { error } = await supabase
+    .from('registered_users')
+    .update({ followed_channels: newChannels })
+    .ilike('nickname', nickname);
+    
+  if (error) {
+    console.error("Error toggling follow channel:", error);
+    return false;
+  }
+  return true;
 };
 
 export const markMessagesAsRead = async (channel, userPseudo) => {

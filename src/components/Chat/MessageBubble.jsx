@@ -138,7 +138,7 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
                 {user_pseudo}
               </button>
             )}
-            {((isOwn && isRegistered) || allRegisteredNicks.some(nick => nick.toLowerCase() === user_pseudo.toLowerCase())) && (
+            {allRegisteredNicks.some(nick => nick.toLowerCase() === user_pseudo.toLowerCase()) && (
               <BadgeCheck size={13} className="ml-1 text-blue-500 flex-shrink-0" />
             )}
           </div>
