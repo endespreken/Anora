@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Moon, Sun, Hash, Menu, MessageCircle, ArrowLeft, Lock, Settings, MoreVertical, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Users, Moon, Sun, Hash, Menu, MessageCircle, ArrowLeft, Lock, Settings, MoreVertical, Bookmark, BookmarkCheck, BadgeCheck } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -44,7 +44,12 @@ export default function Header({
             <Hash size={20} className="text-primary mr-1.5 md:mr-2 md:w-6 md:h-6" />
           )}
           <div className="flex flex-col">
-            <h1 className="text-lg md:text-xl font-bold capitalize tracking-tight leading-none">{displayChannelName}</h1>
+            <h1 className="text-lg md:text-xl font-bold capitalize tracking-tight leading-none flex items-center">
+              {displayChannelName}
+              {currentChannel === 'random' && (
+                <BadgeCheck size={18} className="ml-1.5 text-blue-500 flex-shrink-0" />
+              )}
+            </h1>
             {!isPrivateChannel && (
               <button 
                 onClick={onShowMembers}
@@ -69,14 +74,17 @@ export default function Header({
         {!isPrivateChannel && isRegistered && (
           <button 
             onClick={onToggleFollow}
+            disabled={currentChannel === 'random'}
             className={`p-2 rounded-full transition-all duration-200 border shadow-sm ${
-              isFollowing 
-                ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30' 
-                : 'bg-secondary/30 text-textMuted border-transparent hover:text-text hover:border-border hover:bg-secondary/50'
+              currentChannel === 'random' 
+                ? 'bg-primary/20 text-primary border-primary/30 opacity-70 cursor-not-allowed'
+                : isFollowing 
+                  ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30' 
+                  : 'bg-secondary/30 text-textMuted border-transparent hover:text-text hover:border-border hover:bg-secondary/50'
             }`}
-            title={isFollowing ? "Unfollow Channel" : "Follow Channel"}
+            title={currentChannel === 'random' ? "Official Channel (Selalu Diikuti)" : isFollowing ? "Unfollow Channel" : "Follow Channel"}
           >
-            {isFollowing ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+            {currentChannel === 'random' || isFollowing ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
           </button>
         )}
 

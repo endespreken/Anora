@@ -115,6 +115,7 @@ export default function Sidebar({
                     <div className="flex flex-col items-start overflow-hidden mr-2 flex-1 text-left">
                       <div className="flex items-center w-full">
                         <span className="capitalize truncate">{channel}</span>
+                        {channel === 'random' && <BadgeCheck size={14} className="ml-1 text-blue-500 flex-shrink-0" />}
                         {isPinned && <Pin size={12} className="ml-1.5 text-primary flex-shrink-0" />}
                         <div className="ml-auto flex items-center space-x-1 pl-2">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]"></span>
