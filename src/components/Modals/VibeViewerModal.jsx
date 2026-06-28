@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Eye, Send, Heart, Flame, Smile } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Eye, Send, Heart, Flame, Smile, BadgeCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { recordVibeView } from '../../services/dbServices';
 import { timeAgo } from '../../utils/timeAgo';
 
 export default function VibeViewerModal({ isOpen, onClose, vibesList, initialIndex, onReply }) {
-  const { pseudo } = useAuth();
+  const { pseudo, allRegisteredNicks } = useAuth();
   const [currentUserIndex, setCurrentUserIndex] = useState(initialIndex);
   const [currentVibeIndex, setCurrentVibeIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [replyText, setReplyText] = useState('');
   const [showViews, setShowViews] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   const currentUserObj = vibesList[currentUserIndex];
   const currentVibe = currentUserObj?.vibes[currentVibeIndex];
@@ -29,7 +30,7 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
   }, [currentUserIndex, currentVibeIndex, isOpen]);
 
   // Pause timer when typing reply or showing views
-  const isPaused = replyText.length > 0 || showViews;
+  const isPaused = replyText.length > 0 || showViews || isInputFocused;
 
   useEffect(() => {
     if (!isOpen || !currentVibe || isPaused) return;
@@ -108,9 +109,14 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
             {currentUserObj.nickname.charAt(0).toUpperCase()}
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-white shadow-sm drop-shadow-md">
-              {currentUserObj.nickname}
-            </span>
+            <div className="flex items-center space-x-1">
+              <span className="font-bold text-white shadow-sm drop-shadow-md">
+                {currentUserObj.nickname}
+              </span>
+              {allRegisteredNicks?.includes(currentUserObj.nickname.toLowerCase()) && (
+                <BadgeCheck size={16} className="text-blue-400 drop-shadow-md" />
+              )}
+            </div>
             <span className="text-xs text-white/80 drop-shadow-sm font-medium">
               {timeAgo(currentVibe.created_at)}
             </span>
@@ -136,10 +142,18 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
         </div>
       )}
 
+      {/* Overlay to close views when tapping anywhere outside */}
+      {showViews && (
+        <div 
+          className="absolute inset-0 z-10" 
+          onClick={() => setShowViews(false)}
+        ></div>
+      )}
+
       {/* Bottom Area: Views (if owner) OR Reply (if other) */}
-      <div className="absolute bottom-0 left-0 w-full z-20">
+      <div className="absolute bottom-0 left-0 w-full z-20 pointer-events-none">
         {isMyVibe ? (
-          <div className="w-full flex flex-col items-center">
+          <div className="w-full flex flex-col items-center pointer-events-auto">
             <button 
               onClick={() => setShowViews(!showViews)}
               className="flex items-center space-x-2 text-white/90 hover:text-white pb-6 pt-4 px-4 font-semibold drop-shadow-md transition-transform active:scale-95"
@@ -149,13 +163,13 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
             </button>
             
             {showViews && (
-              <div className="w-full bg-surface/95 backdrop-blur-md rounded-t-3xl p-6 max-h-[50vh] overflow-y-auto shadow-[0_-10px_40px_rgba(0,0,0,0.3)] animate-slide-up border-t border-white/10">
+              <div className="w-full md:max-w-md mx-auto bg-surface/95 backdrop-blur-md rounded-t-3xl md:rounded-3xl md:mb-6 p-6 max-h-[50vh] overflow-y-auto shadow-[0_-10px_40px_rgba(0,0,0,0.3)] animate-slide-up border-t border-white/10">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-text flex items-center">
                     <Eye size={18} className="mr-2 text-primary" />
                     Penonton ({currentVibe.views?.length || 0})
                   </h3>
-                  <button onClick={() => setShowViews(false)} className="p-1 bg-secondary/50 rounded-full text-textMuted"><X size={16} /></button>
+                  <button onClick={() => setShowViews(false)} className="hidden md:flex p-1 bg-secondary/50 hover:bg-secondary rounded-full text-textMuted transition-colors"><X size={16} /></button>
                 </div>
                 
                 {currentVibe.views?.length === 0 ? (
@@ -164,8 +178,13 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
                   <ul className="space-y-3">
                     {currentVibe.views?.map((view, i) => (
                       <li key={i} className="flex justify-between items-center bg-secondary/10 p-3 rounded-2xl border border-border">
-                        <span className="font-bold text-text">{view.viewer_nickname}</span>
-                        <span className="text-xs text-textMuted bg-secondary/50 px-2 py-1 rounded-md">{timeAgo(view.viewed_at)}</span>
+                        <div className="flex items-center space-x-1">
+                          <span className="font-bold text-text">{view.viewer_nickname}</span>
+                          {allRegisteredNicks?.includes(view.viewer_nickname.toLowerCase()) && (
+                            <BadgeCheck size={14} className="text-blue-500" />
+                          )}
+                        </div>
+                        <span className="text-xs font-semibold text-white bg-black/40 px-2.5 py-1 rounded-lg backdrop-blur-md shadow-sm">{timeAgo(view.viewed_at)}</span>
                       </li>
                     ))}
                   </ul>
@@ -174,13 +193,15 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
             )}
           </div>
         ) : (
-          <div className="p-4 bg-gradient-to-t from-black/80 to-transparent">
+          <div className="p-4 bg-gradient-to-t from-black/80 to-transparent pointer-events-auto">
             <div className="flex items-center space-x-3 max-w-lg mx-auto">
               <input 
                 type="text"
                 placeholder="Balas Vibe ini..."
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendReply()}
                 className="flex-1 bg-white/20 text-white placeholder:text-white/60 border border-white/30 rounded-full px-5 py-3 outline-none focus:bg-white/30 transition-colors backdrop-blur-md shadow-lg"
               />
@@ -203,18 +224,18 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
         )}
       </div>
 
-      {/* Desktop Navigation Arrows (hidden on mobile) */}
+      {/* Navigation Arrows (Visible everywhere) */}
       <button 
         onClick={handlePrev} 
-        className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/20 hover:bg-black/40 rounded-full items-center justify-center text-white z-10 transition-colors"
+        className="flex absolute left-2 md:left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-black/20 hover:bg-black/40 rounded-full items-center justify-center text-white z-10 transition-colors"
       >
-        <ChevronLeft size={32} />
+        <ChevronLeft size={28} />
       </button>
       <button 
         onClick={handleNext} 
-        className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/20 hover:bg-black/40 rounded-full items-center justify-center text-white z-10 transition-colors"
+        className="flex absolute right-2 md:right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-black/20 hover:bg-black/40 rounded-full items-center justify-center text-white z-10 transition-colors"
       >
-        <ChevronRight size={32} />
+        <ChevronRight size={28} />
       </button>
 
     </div>

@@ -68,13 +68,13 @@ export default function VibeUploadModal({ isOpen, onClose }) {
       </div>
 
       {/* Color Picker */}
-      <div className="mt-8 flex items-center justify-center space-x-3 overflow-x-auto py-2">
+      <div className="mt-8 flex items-center justify-center space-x-4 overflow-x-auto py-4 px-2">
         {BG_COLORS.map((bg, idx) => (
           <button
             key={idx}
             onClick={() => setColorIndex(idx)}
-            className={`w-10 h-10 rounded-full flex-shrink-0 transition-transform ${bg} ${
-              colorIndex === idx ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-black' : 'hover:scale-110 opacity-70 hover:opacity-100'
+            className={`w-8 h-8 rounded-full flex-shrink-0 transition-all ${bg} ${
+              colorIndex === idx ? 'scale-110 ring-2 ring-white ring-offset-4 ring-offset-black opacity-100' : 'hover:scale-110 opacity-50 hover:opacity-100'
             }`}
           />
         ))}
