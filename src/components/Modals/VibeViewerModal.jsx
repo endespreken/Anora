@@ -225,12 +225,14 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
       </div>
 
       {/* Navigation Arrows (Visible everywhere) */}
-      <button 
-        onClick={handlePrev} 
-        className="flex absolute left-2 md:left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-black/20 hover:bg-black/40 rounded-full items-center justify-center text-white z-10 transition-colors"
-      >
-        <ChevronLeft size={28} />
-      </button>
+      {currentVibeIndex > 0 && (
+        <button 
+          onClick={handlePrev} 
+          className="flex absolute left-2 md:left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-black/20 hover:bg-black/40 rounded-full items-center justify-center text-white z-10 transition-colors"
+        >
+          <ChevronLeft size={28} />
+        </button>
+      )}
       <button 
         onClick={handleNext} 
         className="flex absolute right-2 md:right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-black/20 hover:bg-black/40 rounded-full items-center justify-center text-white z-10 transition-colors"
