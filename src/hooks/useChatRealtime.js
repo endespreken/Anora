@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../config/supabaseClient';
 import { fetchMessages } from '../services/dbServices';
+import { decryptMessage } from '../utils/encryption';
 
 export function useChatRealtime(channel, user, pseudo) {
   const [messages, setMessages] = useState([]);
@@ -47,10 +48,17 @@ export function useChatRealtime(channel, user, pseudo) {
         table: 'messages',
         filter: `channel_name=eq.${channel}`
       }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setMessages((prev) => [...prev, payload.new]);
-        } else if (payload.eventType === 'UPDATE') {
-          setMessages((prev) => prev.map(m => m.id === payload.new.id ? payload.new : m));
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const decryptedNew = {
+            ...payload.new,
+            content: decryptMessage(payload.new.content, channel)
+          };
+          
+          if (payload.eventType === 'INSERT') {
+            setMessages((prev) => [...prev, decryptedNew]);
+          } else {
+            setMessages((prev) => prev.map(m => m.id === decryptedNew.id ? decryptedNew : m));
+          }
         }
       })
       .subscribe();

@@ -4,7 +4,7 @@ import emoji from 'react-easy-emoji';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 
-export default function MessageBubble({ message, isOwn, onReply, onReact, allMessages = [], onUserClick }) {
+export default function MessageBubble({ message, isOwn, onReply, onReact, allMessages = [], onUserClick, isTargetOnline }) {
   const [showMobileReact, setShowMobileReact] = useState(false);
   const [showWebReact, setShowWebReact] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -208,9 +208,13 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
                 <span>{time}</span>
                 {isOwn && (
                   message.is_read ? (
-                    <CheckCheck size={14} className="text-blue-200 drop-shadow-sm" />
+                    <CheckCheck size={14} className="text-blue-400 drop-shadow-sm" />
                   ) : (
-                    <Check size={14} className="text-current opacity-80" />
+                    isPrivate && isTargetOnline ? (
+                      <CheckCheck size={14} className="text-white/60 drop-shadow-sm" />
+                    ) : (
+                      <Check size={14} className="text-white/60 drop-shadow-sm" />
+                    )
                   )
                 )}
               </div>

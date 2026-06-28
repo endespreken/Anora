@@ -8,12 +8,14 @@ import PinGeneratorModal from './components/Modals/PinGeneratorModal';
 import NearbyUsersModal from './components/Modals/NearbyUsersModal';
 import OnlineUsersModal from './components/Modals/OnlineUsersModal';
 import SettingsModal from './components/Modals/SettingsModal';
+import FollowPinModal from './components/Modals/FollowPinModal';
+import UnfollowConfirmModal from './components/Modals/UnfollowConfirmModal';
 import { useChatRealtime } from './hooks/useChatRealtime';
 import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './config/supabaseClient';
 import { soundManager } from './utils/SoundManager';
-import { markMessagesAsRead, sendMessage, fetchUnreadCountsForUser, fetchFriends, checkIsFriend, fetchFollowedChannels, toggleFollowChannel } from './services/dbServices';
+import { markMessagesAsRead, sendMessage, fetchUnreadCountsForUser, fetchFriends, fetchFriendNicks, addFriendWithPin, removeFriend, checkIsFriend, fetchFollowedChannels, toggleFollowChannel } from './services/dbServices';
 import { useGlobalPresence } from './hooks/useGlobalPresence';
 import { useSettings } from './contexts/SettingsContext';
 import Home from './components/Home/Home';
@@ -41,19 +43,39 @@ function App() {
   const [pinnedChannels, setPinnedChannels] = useState([]);
   const [globalTyping, setGlobalTyping] = useState({});
   const [friends, setFriends] = useState([]);
+  const [friendNicks, setFriendNicks] = useState([]);
   const [followedChannels, setFollowedChannels] = useState([]);
+  const [isFollowPinModalOpen, setIsFollowPinModalOpen] = useState(false);
+  const [isUnfollowConfirmModalOpen, setIsUnfollowConfirmModalOpen] = useState(false);
+  const [targetFollowUser, setTargetFollowUser] = useState('');
   const globalChannelRef = useRef(null);
   const { friendsOnlyPM } = useSettings();
 
   useEffect(() => {
     if (user) {
-      const loadFriends = async () => {
-        const friendIds = await fetchFriends(user.id);
-        setFriends(friendIds);
-      };
-      loadFriends();
+      if (isRegistered && pseudo) {
+        const loadFriends = async () => {
+          const friendIds = await fetchFriends(user.id);
+          setFriends(friendIds);
+          const nicks = await fetchFriendNicks(user.id);
+          setFriendNicks(nicks);
+          
+          if (nicks.length > 0) {
+            setPrivateChannels(prev => {
+              const newPMs = nicks.map(n => `@${[pseudo, n].sort().join('-')}`);
+              const merged = [...new Set([...prev, ...newPMs])];
+              localStorage.setItem(`anora_pm_${pseudo}`, JSON.stringify(merged));
+              return merged;
+            });
+          }
+        };
+        loadFriends();
+      } else {
+        setFriends([]);
+        setFriendNicks([]);
+      }
     }
-  }, [user]);
+  }, [user, isRegistered, pseudo]);
   
   // Load channels when pseudo changes
   useEffect(() => {
@@ -409,7 +431,20 @@ function App() {
   };
 
   const handleToggleFollow = async () => {
-    if (!isRegistered || currentChannel.startsWith('@')) return;
+    if (!isRegistered) return;
+    
+    if (currentChannel.startsWith('@')) {
+      const targetUser = currentChannel.replace('@', '').split('-').find(p => p !== pseudo) || currentChannel.replace('@', '').split('-')[0];
+      setTargetFollowUser(targetUser);
+      
+      const isFriend = friendNicks.some(n => n.toLowerCase() === targetUser.toLowerCase());
+      if (isFriend) {
+        setIsUnfollowConfirmModalOpen(true);
+      } else {
+        setIsFollowPinModalOpen(true);
+      }
+      return;
+    }
     
     const channelName = currentChannel;
     const isCurrentlyFollowing = followedChannels.includes(channelName);
@@ -476,6 +511,30 @@ function App() {
     );
   }
 
+  const handleSubmitFollowPin = async (pin) => {
+    if (!user) return false;
+    const result = await addFriendWithPin(user.id, pin);
+    if (result.success) {
+      const friendIds = await fetchFriends(user.id);
+      setFriends(friendIds);
+      const nicks = await fetchFriendNicks(user.id);
+      setFriendNicks(nicks);
+      return true;
+    }
+    return false;
+  };
+
+  const handleConfirmUnfollow = async () => {
+    if (!user) return;
+    const success = await removeFriend(user.id, targetFollowUser);
+    if (success) {
+      const friendIds = await fetchFriends(user.id);
+      setFriends(friendIds);
+      const nicks = await fetchFriendNicks(user.id);
+      setFriendNicks(nicks);
+    }
+  };
+
   if (!hasJoined) {
     return <Home onJoin={() => setHasJoined(true)} />;
   }
@@ -526,7 +585,11 @@ function App() {
           onUserClick={startPrivateMessage}
           onShowMembers={() => setIsOnlineModalOpen(true)}
           onSettingsClick={() => setIsSettingsModalOpen(true)}
-          isFollowing={followedChannels.includes(currentChannel)}
+          isFollowing={
+            currentChannel.startsWith('@')
+              ? friendNicks.some(n => n.toLowerCase() === (currentChannel.replace('@', '').split('-').find(p => p !== pseudo) || '').toLowerCase())
+              : followedChannels.includes(currentChannel)
+          }
           onToggleFollow={handleToggleFollow}
         />
         
@@ -536,6 +599,7 @@ function App() {
           typingUsers={typingUsers}
           onReply={(msg) => setReplyingTo(msg)}
           onUserClick={startPrivateMessage}
+          isTargetOnline={currentChannel.startsWith('@') && onlineUsers.some(u => u.pseudo !== pseudo)}
         />
         
         <div className="sticky bottom-0 w-full z-10">
@@ -562,7 +626,19 @@ function App() {
         onUserClick={startPrivateMessage}
       />
 
-      <OnlineUsersModal
+        <FollowPinModal
+          isOpen={isFollowPinModalOpen}
+          onClose={() => setIsFollowPinModalOpen(false)}
+          targetUserNick={targetFollowUser}
+          onSubmitPin={handleSubmitFollowPin}
+        />
+        <UnfollowConfirmModal
+          isOpen={isUnfollowConfirmModalOpen}
+          onClose={() => setIsUnfollowConfirmModalOpen(false)}
+          targetUserNick={targetFollowUser}
+          onConfirm={handleConfirmUnfollow}
+        />
+        <OnlineUsersModal
         isOpen={isOnlineModalOpen}
         onClose={() => setIsOnlineModalOpen(false)}
         onlineUsers={onlineUsers}

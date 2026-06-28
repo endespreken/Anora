@@ -22,6 +22,7 @@ export default function NearbyUsersModal({ isOpen, onClose, onlineUsers, onUserC
         const dist = calculateDistance(myLat, myLng, u.lat, u.lng);
         return { ...u, distance: dist };
       })
+      .filter(u => u.distance < 5)
       .sort((a, b) => a.distance - b.distance);
 
     return others;
@@ -69,7 +70,7 @@ export default function NearbyUsersModal({ isOpen, onClose, onlineUsers, onUserC
           ) : nearbyUsers.length === 0 ? (
             <div className="bg-secondary/20 border border-border rounded-2xl p-6 text-center">
               <p className="text-sm text-textMuted">
-                No other users found nearby.
+                Tidak ada pengguna lain dalam radius 5 km.
               </p>
             </div>
           ) : (

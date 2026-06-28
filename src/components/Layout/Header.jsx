@@ -71,18 +71,22 @@ export default function Header({
           </span>
         </div>
         
-        {!isPrivateChannel && isRegistered && (
+        {isRegistered && (
           <button 
             onClick={onToggleFollow}
             disabled={currentChannel === 'random'}
-            className={`p-2 rounded-full transition-all duration-200 border shadow-sm ${
+            className={`p-2 rounded-full transition-all duration-200 border shadow-sm active:scale-95 ${
               currentChannel === 'random' 
                 ? 'bg-primary/20 text-primary border-primary/30 opacity-70 cursor-not-allowed'
                 : isFollowing 
                   ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30' 
                   : 'bg-secondary/30 text-textMuted border-transparent hover:text-text hover:border-border hover:bg-secondary/50'
             }`}
-            title={currentChannel === 'random' ? "Official Channel (Selalu Diikuti)" : isFollowing ? "Unfollow Channel" : "Follow Channel"}
+            title={
+              currentChannel === 'random' ? "Official Channel (Selalu Diikuti)" : 
+              isPrivateChannel ? (isFollowing ? "Unfollow Teman" : "Add Friend") :
+              isFollowing ? "Unfollow Channel" : "Follow Channel"
+            }
           >
             {currentChannel === 'random' || isFollowing ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
           </button>

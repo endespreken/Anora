@@ -1,7 +1,11 @@
 import { supabase } from '../config/supabaseClient';
+import { encryptMessage, decryptMessage } from '../utils/encryption';
 
 export const sendMessage = async (channel, pseudo, content, isSystem = false, replyToId = null, userId = null) => {
-  const insertData = { channel_name: channel, user_pseudo: pseudo, content, is_system_msg: isSystem };
+  // Encrypt the message content
+  const encryptedContent = encryptMessage(content, channel);
+  
+  const insertData = { channel_name: channel, user_pseudo: pseudo, content: encryptedContent, is_system_msg: isSystem };
   if (userId) insertData.user_id = userId;
   if (replyToId) insertData.reply_to_id = replyToId;
 
@@ -28,7 +32,14 @@ export const fetchMessages = async (channel, limit = 50) => {
     console.error("Error fetching messages:", error);
     return [];
   }
-  return data.reverse();
+  
+  // Decrypt messages
+  const decryptedData = data.map(msg => ({
+    ...msg,
+    content: decryptMessage(msg.content, channel)
+  }));
+  
+  return decryptedData.reverse();
 };
 
 export const fetchUnreadCountsForUser = async (channels, pseudo) => {
@@ -156,6 +167,36 @@ export const fetchFriends = async (userId) => {
   return friendIds;
 };
 
+export const fetchFriendNicks = async (userId) => {
+  if (!userId) return [];
+  
+  // A friend link can have the user in user_a_id or user_b_id
+  const { data, error } = await supabase
+    .from('friend_links')
+    .select('user_a_id, user_b_id')
+    .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`);
+
+  if (error || !data) {
+    console.error("Error fetching friend links:", error);
+    return [];
+  }
+
+  const friendIds = data.map(link => link.user_a_id === userId ? link.user_b_id : link.user_a_id);
+  if (friendIds.length === 0) return [];
+  
+  const { data: usersData, error: usersError } = await supabase
+    .from('registered_users')
+    .select('nickname')
+    .in('user_id', friendIds);
+    
+  if (usersError || !usersData) {
+    console.error("Error fetching friend nicks:", usersError);
+    return [];
+  }
+  
+  return usersData.map(u => u.nickname);
+};
+
 export const checkIsFriend = async (myUserId, targetUserId) => {
   if (!myUserId || !targetUserId) return false;
   const { data, error } = await supabase
@@ -169,6 +210,27 @@ export const checkIsFriend = async (myUserId, targetUserId) => {
     return false;
   }
   return !!data;
+};
+
+export const removeFriend = async (myUserId, targetNick) => {
+  if (!myUserId || !targetNick) return false;
+  
+  // First, find the target user's ID
+  const { data: targetData, error: targetError } = await supabase
+    .from('registered_users')
+    .select('user_id')
+    .ilike('nickname', targetNick)
+    .maybeSingle();
+    
+  if (targetError || !targetData || !targetData.user_id) return false;
+  const targetUserId = targetData.user_id;
+  
+  const { error } = await supabase
+    .from('friend_links')
+    .delete()
+    .or(`and(user_a_id.eq.${myUserId},user_b_id.eq.${targetUserId}),and(user_a_id.eq.${targetUserId},user_b_id.eq.${myUserId})`);
+    
+  return !error;
 };
 
 // --- New logic for Registration ---
