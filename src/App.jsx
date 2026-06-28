@@ -27,6 +27,7 @@ function App() {
   const [isNearbyModalOpen, setIsNearbyModalOpen] = useState(false);
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [pendingVibeReply, setPendingVibeReply] = useState(null);
   const [activeMobileTab, setActiveMobileTab] = useState('pms');
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState({});
@@ -477,6 +478,21 @@ function App() {
     changeChannel(pmChannel);
   };
 
+  const handleVibeReply = (targetNickname, message) => {
+    startPrivateMessage(targetNickname);
+    setPendingVibeReply({ targetNickname, message });
+  };
+
+  useEffect(() => {
+    if (pendingVibeReply && pseudo) {
+      const pmChannel = `@${[pseudo, pendingVibeReply.targetNickname].sort().join('-')}`;
+      if (currentChannel === pmChannel) {
+        handleSendMessage(pendingVibeReply.message);
+        setPendingVibeReply(null);
+      }
+    }
+  }, [pendingVibeReply, currentChannel, pseudo]);
+
   const { parseCommand } = useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage, joinedSpaces, privateChannels);
 
   const globalBroadcastTyping = () => {
@@ -563,7 +579,9 @@ function App() {
           globalTyping={globalTyping}
           globalOnlineUsers={globalOnlineUsers}
           friends={friends}
+          friendNicks={friendNicks}
           onSettingsClick={() => setIsSettingsModalOpen(true)}
+          onReply={handleVibeReply}
         />
         <BottomNav 
           activeTab={activeMobileTab} 

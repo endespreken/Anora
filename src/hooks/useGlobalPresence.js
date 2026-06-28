@@ -18,7 +18,8 @@ export function useGlobalPresence(user, pseudo, joinedSpaces, privateChannels) {
       .on('presence', { event: 'sync' }, () => {
         const state = presenceChannel.presenceState();
         const users = Object.values(state).flatMap(users => users);
-        const uniqueUsers = Array.from(new Map(users.map(u => [u.user_id, u])).values());
+        // Deduplicate by nickname (pseudo) to prevent duplicate names in the list
+        const uniqueUsers = Array.from(new Map(users.map(u => [u.pseudo, u])).values());
         setGlobalOnlineUsers(uniqueUsers); 
       })
       .subscribe(async (status) => {

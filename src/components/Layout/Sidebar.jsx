@@ -3,13 +3,14 @@ import { Hash, Radar, UserPlus, Zap, MapPin, X, Lock, Pin, MessageCircle, BadgeC
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { fetchFriends } from '../../services/dbServices';
+import VibesBar from '../Modals/VibesBar';
 
 export default function Sidebar({ 
   currentChannel, changeChannel, openPinModal, openNearbyModal, 
   unreadCounts = {}, privateChannels = [], closePrivateChannel, 
   joinedSpaces = ['random'], closeSpace, activeMobileTab = 'pms', 
   onMarkAsRead, pinnedChannels = [], onPinChat, globalTyping = {},
-  globalOnlineUsers = [], friends = [], onSettingsClick
+  globalOnlineUsers = [], friends = [], friendNicks = [], onSettingsClick
 }) {
   const { user, pseudo, allRegisteredNicks = [] } = useAuth();
   const [contextMenu, setContextMenu] = useState(null);
@@ -76,6 +77,8 @@ export default function Sidebar({
           <MoreVertical size={20} />
         </button>
       </div>
+      
+      <VibesBar friendNicks={friendNicks} />
       
       <div className="flex-1 overflow-y-auto p-4 md:space-y-8 pb-20 md:pb-4">
         

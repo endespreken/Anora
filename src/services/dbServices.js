@@ -415,3 +415,103 @@ export const addReaction = async (messageId, emoji, userPseudo) => {
     
   if (updateError) console.error("Error updating reaction:", updateError);
 };
+
+// --- Vibes Functions ---
+
+export const uploadVibe = async (userId, content, bgColor) => {
+  if (!userId || !content) return false;
+  const { error } = await supabase
+    .from('vibes')
+    .insert([{ 
+      user_id: userId, 
+      content, 
+      bg_color: bgColor || 'bg-gradient-to-br from-primary to-accent' 
+    }]);
+  
+  if (error) {
+    console.error("Error uploading vibe:", error);
+    return false;
+  }
+  return true;
+};
+
+export const fetchActiveVibes = async () => {
+  const { data, error } = await supabase
+    .from('vibes')
+    .select(`
+      id,
+      content,
+      bg_color,
+      created_at,
+      expires_at,
+      user_id,
+      registered_users!inner(nickname, vibes_visibility),
+      vibe_views(viewer_nickname, viewed_at)
+    `)
+    .gte('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    console.error("Error fetching vibes:", error);
+    return [];
+  }
+  
+  // Group by user
+  const vibesByUser = {};
+  data.forEach(vibe => {
+    const nick = vibe.registered_users.nickname;
+    if (!vibesByUser[nick]) {
+      vibesByUser[nick] = {
+        nickname: nick,
+        user_id: vibe.user_id,
+        vibes_visibility: vibe.registered_users.vibes_visibility || 'friends_only',
+        vibes: []
+      };
+    }
+    vibesByUser[nick].vibes.push({
+      id: vibe.id,
+      content: vibe.content,
+      bg_color: vibe.bg_color,
+      created_at: vibe.created_at,
+      expires_at: vibe.expires_at,
+      views: vibe.vibe_views || []
+    });
+  });
+
+  return Object.values(vibesByUser);
+};
+
+export const recordVibeView = async (vibeId, viewerNickname) => {
+  if (!vibeId || !viewerNickname) return;
+  // Use upsert to ignore duplicates (since there is a unique constraint)
+  const { error } = await supabase
+    .from('vibe_views')
+    .upsert(
+      { vibe_id: vibeId, viewer_nickname: viewerNickname },
+      { onConflict: 'vibe_id,viewer_nickname', ignoreDuplicates: true }
+    );
+    
+  if (error) console.error("Error recording vibe view:", error);
+};
+
+export const fetchVibesVisibility = async (nickname) => {
+  if (!nickname) return 'friends_only';
+  const { data, error } = await supabase
+    .from('registered_users')
+    .select('vibes_visibility')
+    .ilike('nickname', nickname)
+    .maybeSingle();
+    
+  if (error || !data) return 'friends_only';
+  return data.vibes_visibility || 'friends_only';
+};
+
+export const updateVibesVisibility = async (nickname, visibility) => {
+  if (!nickname || !visibility) return false;
+  const { error } = await supabase
+    .from('registered_users')
+    .update({ vibes_visibility: visibility })
+    .ilike('nickname', nickname);
+    
+  return !error;
+};

@@ -75,8 +75,8 @@ export default function NearbyUsersModal({ isOpen, onClose, onlineUsers, onUserC
             </div>
           ) : (
             <ul className="space-y-3">
-              {nearbyUsers.map(u => (
-                <li key={u.user_id}>
+              {nearbyUsers.map((u, idx) => (
+                <li key={u.pseudo || idx}>
                   <button 
                     onClick={() => {
                       if (onUserClick) {
