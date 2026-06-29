@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 export default function Header({ 
   currentChannel, onlineUsers = [], onMenuClick, onUserClick, 
   isMobileChatOpen, onBack, onShowMembers, onSettingsClick,
-  isFollowing, onToggleFollow 
+  isFollowing, onToggleFollow, onProfileClick
 }) {
   const { theme, toggleTheme } = useTheme();
   const { pseudo, isRegistered } = useAuth();
@@ -44,7 +44,10 @@ export default function Header({
             <Hash size={20} className="text-primary mr-1.5 md:mr-2 md:w-6 md:h-6" />
           )}
           <div className="flex flex-col">
-            <h1 className="text-lg md:text-xl font-bold capitalize tracking-tight leading-none flex items-center">
+            <h1 
+              className={`text-lg md:text-xl font-bold capitalize tracking-tight leading-none flex items-center ${isPrivateChannel ? 'cursor-pointer hover:text-primary transition-colors' : ''}`}
+              onClick={() => isPrivateChannel && onProfileClick && onProfileClick(displayChannelName)}
+            >
               {displayChannelName}
               {currentChannel === 'random' && (
                 <BadgeCheck size={18} className="ml-1.5 text-blue-500 flex-shrink-0" />

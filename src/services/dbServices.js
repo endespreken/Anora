@@ -418,12 +418,24 @@ export const addReaction = async (messageId, emoji, userPseudo) => {
 
 // --- Vibes Functions ---
 
-export const uploadVibe = async (userId, content, bgColor) => {
-  if (!userId || !content) return false;
+export const uploadVibe = async (nickname, content, bgColor) => {
+  if (!nickname || !content) return false;
+
+  const { data: userData, error: userError } = await supabase
+    .from('registered_users')
+    .select('user_id')
+    .ilike('nickname', nickname)
+    .maybeSingle();
+
+  if (userError || !userData || !userData.user_id) {
+    console.error("Error finding user for vibe upload:", userError);
+    return false;
+  }
+
   const { error } = await supabase
     .from('vibes')
     .insert([{ 
-      user_id: userId, 
+      user_id: userData.user_id, 
       content, 
       bg_color: bgColor || 'bg-gradient-to-br from-primary to-accent' 
     }]);
@@ -514,4 +526,48 @@ export const updateVibesVisibility = async (nickname, visibility) => {
     .ilike('nickname', nickname);
     
   return !error;
+};
+
+export const fetchUserProfile = async (nickname) => {
+  if (!nickname) return null;
+  const { data, error } = await supabase
+    .from('registered_users')
+    .select('user_id, nickname, avatar_url, bio, gender, created_at')
+    .ilike('nickname', nickname)
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) console.error("Error fetching profile:", error);
+    return null;
+  }
+  
+  let connectionCount = 0;
+  if (data.user_id) {
+    const { count } = await supabase
+      .from('friend_links')
+      .select('*', { count: 'exact', head: true })
+      .or(`user_a_id.eq.${data.user_id},user_b_id.eq.${data.user_id}`);
+    connectionCount = count || 0;
+  }
+
+  return { ...data, connectionCount };
+};
+
+export const updateUserProfile = async (nickname, profileData) => {
+  if (!nickname) return false;
+  
+  const { error } = await supabase
+    .from('registered_users')
+    .update({
+      avatar_url: profileData.avatar_url,
+      bio: profileData.bio,
+      gender: profileData.gender
+    })
+    .ilike('nickname', nickname);
+    
+  if (error) {
+    console.error("Error updating profile:", error);
+    return false;
+  }
+  return true;
 };

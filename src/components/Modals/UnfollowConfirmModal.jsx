@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { UserMinus, AlertTriangle } from 'lucide-react';
+import { UserMinus, AlertTriangle, Hash } from 'lucide-react';
 
-export default function UnfollowConfirmModal({ isOpen, onClose, targetUserNick, onConfirm }) {
+export default function UnfollowConfirmModal({ isOpen, onClose, targetUserNick, isSpace = false, onConfirm }) {
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -19,11 +19,13 @@ export default function UnfollowConfirmModal({ isOpen, onClose, targetUserNick, 
         
         <div className="p-6 text-center">
           <div className="w-16 h-16 bg-accent/10 text-accent rounded-full flex items-center justify-center mx-auto mb-4">
-            <UserMinus size={32} />
+            {isSpace ? <Hash size={32} /> : <UserMinus size={32} />}
           </div>
           <h2 className="text-xl font-bold text-text mb-2">Unfollow {targetUserNick}?</h2>
           <p className="text-sm text-textMuted mb-6">
-            Apakah kamu yakin ingin berhenti mengikuti percakapan ini dan menghapus <strong>{targetUserNick}</strong> dari daftar temanmu?
+            {isSpace 
+              ? `Apakah kamu yakin ingin berhenti mengikuti space ${targetUserNick}?`
+              : `Apakah kamu yakin ingin berhenti mengikuti percakapan ini dan menghapus ${targetUserNick} dari daftar temanmu?`}
           </p>
 
           <div className="flex space-x-3">

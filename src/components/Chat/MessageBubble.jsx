@@ -4,7 +4,7 @@ import emoji from 'react-easy-emoji';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 
-export default function MessageBubble({ message, isOwn, onReply, onReact, allMessages = [], onUserClick, isTargetOnline }) {
+export default function MessageBubble({ message, isOwn, onReply, onReact, allMessages = [], onUserClick, onProfileClick, isTargetOnline }) {
   const [showMobileReact, setShowMobileReact] = useState(false);
   const [showWebReact, setShowWebReact] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -132,7 +132,7 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
               <span className="font-semibold text-text">{user_pseudo}</span>
             ) : (
               <button 
-                onClick={() => onUserClick && onUserClick(user_pseudo)}
+                onClick={() => onProfileClick ? onProfileClick(user_pseudo) : (onUserClick && onUserClick(user_pseudo))}
                 className="font-semibold text-text hover:text-primary hover:underline transition-colors focus:outline-none"
               >
                 {user_pseudo}

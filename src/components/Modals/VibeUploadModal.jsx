@@ -14,7 +14,7 @@ const BG_COLORS = [
 ];
 
 export default function VibeUploadModal({ isOpen, onClose }) {
-  const { user } = useAuth();
+  const { pseudo, isRegistered } = useAuth();
   const [content, setContent] = useState('');
   const [colorIndex, setColorIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -22,9 +22,13 @@ export default function VibeUploadModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   const handleUpload = async () => {
-    if (!content.trim() || !user) return;
+    if (!isRegistered) {
+      alert("Hanya pengguna teregistrasi yang dapat mengunggah vibe.");
+      return;
+    }
+    if (!content.trim() || !pseudo) return;
     setLoading(true);
-    const success = await uploadVibe(user.id, content.trim(), BG_COLORS[colorIndex]);
+    const success = await uploadVibe(pseudo, content.trim(), BG_COLORS[colorIndex]);
     setLoading(false);
     if (success) {
       onClose();

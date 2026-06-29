@@ -10,6 +10,7 @@ import OnlineUsersModal from './components/Modals/OnlineUsersModal';
 import SettingsModal from './components/Modals/SettingsModal';
 import FollowPinModal from './components/Modals/FollowPinModal';
 import UnfollowConfirmModal from './components/Modals/UnfollowConfirmModal';
+import ProfileModal from './components/Modals/ProfileModal';
 import { useChatRealtime } from './hooks/useChatRealtime';
 import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
@@ -48,7 +49,10 @@ function App() {
   const [followedChannels, setFollowedChannels] = useState([]);
   const [isFollowPinModalOpen, setIsFollowPinModalOpen] = useState(false);
   const [isUnfollowConfirmModalOpen, setIsUnfollowConfirmModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [profileTargetNickname, setProfileTargetNickname] = useState('');
   const [targetFollowUser, setTargetFollowUser] = useState('');
+  const [unfollowTargetIsSpace, setUnfollowTargetIsSpace] = useState(false);
   const globalChannelRef = useRef(null);
   const { friendsOnlyPM } = useSettings();
 
@@ -437,6 +441,7 @@ function App() {
     if (currentChannel.startsWith('@')) {
       const targetUser = currentChannel.replace('@', '').split('-').find(p => p !== pseudo) || currentChannel.replace('@', '').split('-')[0];
       setTargetFollowUser(targetUser);
+      setUnfollowTargetIsSpace(false);
       
       const isFriend = friendNicks.some(n => n.toLowerCase() === targetUser.toLowerCase());
       if (isFriend) {
@@ -449,20 +454,21 @@ function App() {
     
     const channelName = currentChannel;
     const isCurrentlyFollowing = followedChannels.includes(channelName);
-    const intentToFollow = !isCurrentlyFollowing;
     
-    // Optimistic update
-    setFollowedChannels(prev => 
-      intentToFollow ? [...prev, channelName] : prev.filter(c => c !== channelName)
-    );
-
-    const success = await toggleFollowChannel(pseudo, channelName, intentToFollow);
+    if (isCurrentlyFollowing) {
+      // Intent to unfollow space -> show modal
+      setTargetFollowUser(channelName);
+      setUnfollowTargetIsSpace(true);
+      setIsUnfollowConfirmModalOpen(true);
+      return;
+    }
+    
+    // Intent to follow space -> execute directly
+    setFollowedChannels(prev => [...prev, channelName]);
+    const success = await toggleFollowChannel(pseudo, channelName, true);
     
     if (!success) {
-      // Revert if failed
-      setFollowedChannels(prev => 
-        !intentToFollow ? [...prev, channelName] : prev.filter(c => c !== channelName)
-      );
+      setFollowedChannels(prev => prev.filter(c => c !== channelName));
     }
   };
 
@@ -471,6 +477,12 @@ function App() {
 
   const openNearbyModal = () => setIsNearbyModalOpen(true);
   const closeNearbyModal = () => setIsNearbyModalOpen(false);
+
+  const openProfileModal = (nickname) => {
+    setProfileTargetNickname(nickname);
+    setIsProfileModalOpen(true);
+  };
+  const closeProfileModal = () => setIsProfileModalOpen(false);
 
   const startPrivateMessage = (targetPseudo) => {
     if (targetPseudo === pseudo) return;
@@ -542,12 +554,25 @@ function App() {
 
   const handleConfirmUnfollow = async () => {
     if (!user) return;
-    const success = await removeFriend(user.id, targetFollowUser);
-    if (success) {
-      const friendIds = await fetchFriends(user.id);
-      setFriends(friendIds);
-      const nicks = await fetchFriendNicks(user.id);
-      setFriendNicks(nicks);
+    
+    if (unfollowTargetIsSpace) {
+      const channelName = targetFollowUser;
+      
+      // Optimistic update
+      setFollowedChannels(prev => prev.filter(c => c !== channelName));
+      
+      const success = await toggleFollowChannel(pseudo, channelName, false);
+      if (!success) {
+        setFollowedChannels(prev => [...prev, channelName]);
+      }
+    } else {
+      const success = await removeFriend(user.id, targetFollowUser);
+      if (success) {
+        const friendIds = await fetchFriends(user.id);
+        setFriends(friendIds);
+        const nicks = await fetchFriendNicks(user.id);
+        setFriendNicks(nicks);
+      }
     }
   };
 
@@ -581,6 +606,7 @@ function App() {
           friends={friends}
           friendNicks={friendNicks}
           onSettingsClick={() => setIsSettingsModalOpen(true)}
+          onProfileClick={() => openProfileModal(pseudo)}
           onReply={handleVibeReply}
         />
         <BottomNav 
@@ -603,6 +629,7 @@ function App() {
           onUserClick={startPrivateMessage}
           onShowMembers={() => setIsOnlineModalOpen(true)}
           onSettingsClick={() => setIsSettingsModalOpen(true)}
+          onProfileClick={openProfileModal}
           isFollowing={
             currentChannel.startsWith('@')
               ? friendNicks.some(n => n.toLowerCase() === (currentChannel.replace('@', '').split('-').find(p => p !== pseudo) || '').toLowerCase())
@@ -617,6 +644,7 @@ function App() {
           typingUsers={typingUsers}
           onReply={(msg) => setReplyingTo(msg)}
           onUserClick={startPrivateMessage}
+          onProfileClick={openProfileModal}
           isTargetOnline={currentChannel.startsWith('@') && onlineUsers.some(u => u.pseudo !== pseudo)}
         />
         
@@ -654,6 +682,7 @@ function App() {
           isOpen={isUnfollowConfirmModalOpen}
           onClose={() => setIsUnfollowConfirmModalOpen(false)}
           targetUserNick={targetFollowUser}
+          isSpace={unfollowTargetIsSpace}
           onConfirm={handleConfirmUnfollow}
         />
         <OnlineUsersModal
@@ -661,6 +690,17 @@ function App() {
         onClose={() => setIsOnlineModalOpen(false)}
         onlineUsers={onlineUsers}
         onUserClick={startPrivateMessage}
+        onProfileClick={openProfileModal}
+      />
+
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={closeProfileModal}
+        targetNickname={profileTargetNickname}
+        onMessageClick={(nick) => {
+          closeProfileModal();
+          startPrivateMessage(nick);
+        }}
       />
 
       <SettingsModal 
