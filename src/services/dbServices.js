@@ -571,3 +571,38 @@ export const updateUserProfile = async (nickname, profileData) => {
   }
   return true;
 };
+
+export const uploadFileToR2 = async (file) => {
+  try {
+    const safeFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const { data, error } = await supabase.functions.invoke('generate-r2-url', {
+      body: { filename: safeFilename, contentType: file.type }
+    });
+    
+    if (error) throw error;
+    
+    let { signedUrl, publicUrl } = data;
+    
+    // Ensure publicUrl has https:// if user forgot it in their edge function env var
+    if (publicUrl && !publicUrl.startsWith('http')) {
+      publicUrl = 'https://' + publicUrl.replace(/^:\/\//, '');
+    }
+    
+    const uploadResponse = await fetch(signedUrl, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Content-Type': file.type,
+      },
+    });
+
+    if (uploadResponse.ok) {
+      return publicUrl;
+    } else {
+      throw new Error("Failed to upload to R2");
+    }
+  } catch (err) {
+    console.error("R2 Upload Error:", err);
+    return null;
+  }
+};

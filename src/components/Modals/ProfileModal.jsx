@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Users, Info, Camera, Edit2, Save, Link as LinkIcon, MapPin, BadgeCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { fetchUserProfile, updateUserProfile } from '../../services/dbServices';
+import { fetchUserProfile, updateUserProfile, uploadFileToR2 } from '../../services/dbServices';
 
 export default function ProfileModal({ isOpen, onClose, targetNickname, onMessageClick }) {
   const { pseudo, isRegistered } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [localAvatarPreview, setLocalAvatarPreview] = useState(null);
   
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -20,12 +22,19 @@ export default function ProfileModal({ isOpen, onClose, targetNickname, onMessag
 
   const isOwnProfile = pseudo === targetNickname && isRegistered;
 
+  const formatUrl = (url) => {
+    if (!url) return '';
+    if (!url.startsWith('http')) return 'https://' + url.replace(/^:\/\//, '');
+    return url;
+  };
+
   useEffect(() => {
     if (isOpen && targetNickname) {
       loadProfile();
     } else {
       setProfile(null);
       setIsEditing(false);
+      setLocalAvatarPreview(null);
     }
   }, [isOpen, targetNickname]);
 
@@ -79,6 +88,25 @@ export default function ProfileModal({ isOpen, onClose, targetNickname, onMessag
     setSaving(false);
   };
 
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Immediate visual feedback
+    const previewUrl = URL.createObjectURL(file);
+    setLocalAvatarPreview(previewUrl);
+    
+    setUploadingAvatar(true);
+    const publicUrl = await uploadFileToR2(file);
+    if (publicUrl) {
+      setEditForm(prev => ({ ...prev, avatar_url: publicUrl }));
+    } else {
+      alert("Gagal mengunggah foto profil. Silakan coba lagi.");
+      setLocalAvatarPreview(null); // Revert preview on failure
+    }
+    setUploadingAvatar(false);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -111,15 +139,30 @@ export default function ProfileModal({ isOpen, onClose, targetNickname, onMessag
             <div className="flex flex-col items-center">
               
               <div className="relative mb-4 group">
-                <div className="w-24 h-24 rounded-full bg-secondary overflow-hidden border-4 border-surface shadow-md">
-                  {isEditing && editForm.avatar_url ? (
-                    <img src={editForm.avatar_url} alt={profile.nickname} className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src = ''; }} />
+                <div className="w-24 h-24 rounded-full bg-secondary overflow-hidden border-4 border-surface shadow-md relative">
+                  {localAvatarPreview ? (
+                    <img src={localAvatarPreview} alt={profile.nickname} className="w-full h-full object-cover bg-surface" />
+                  ) : isEditing && editForm.avatar_url ? (
+                    <img src={formatUrl(editForm.avatar_url)} alt={profile.nickname} className="w-full h-full object-cover bg-surface" onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${profile.nickname}&background=random`; }} />
                   ) : profile.avatar_url ? (
-                    <img src={profile.avatar_url} alt={profile.nickname} className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src = ''; }} />
+                    <img src={formatUrl(profile.avatar_url)} alt={profile.nickname} className="w-full h-full object-cover bg-surface" onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${profile.nickname}&background=random`; }} />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20 text-primary">
                       <User size={40} />
                     </div>
+                  )}
+                  {isEditing && (
+                    <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                      {uploadingAvatar ? (
+                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <>
+                          <Camera size={24} className="text-white mb-1" />
+                          <span className="text-[10px] text-white font-medium text-center">Ubah Foto</span>
+                          <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={uploadingAvatar} />
+                        </>
+                      )}
+                    </label>
                   )}
                 </div>
               </div>
@@ -139,27 +182,13 @@ export default function ProfileModal({ isOpen, onClose, targetNickname, onMessag
               {isEditing ? (
                 <div className="w-full space-y-4 animate-fade-in">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-textMuted flex items-center">
-                      <LinkIcon size={12} className="mr-1" />
-                      URL Foto Profil
-                    </label>
-                    <input 
-                      type="url"
-                      value={editForm.avatar_url}
-                      onChange={e => setEditForm(prev => ({ ...prev, avatar_url: e.target.value }))}
-                      placeholder="https://..."
-                      className="w-full bg-secondary/50 border border-border rounded-xl px-3 py-2 text-sm text-text focus:outline-none focus:border-primary transition-colors placeholder:text-textMuted/50"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
                     <label className="text-xs font-semibold text-textMuted">Bio</label>
                     <textarea 
                       value={editForm.bio}
                       onChange={e => setEditForm(prev => ({ ...prev, bio: e.target.value }))}
                       placeholder="Tulis sesuatu tentang dirimu..."
                       rows={3}
-                      className="w-full bg-secondary/50 border border-border rounded-xl px-3 py-2 text-sm text-text focus:outline-none focus:border-primary transition-colors placeholder:text-textMuted/50 resize-none custom-scrollbar"
+                      className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm text-text focus:outline-none focus:border-primary transition-colors placeholder:text-textMuted/50 resize-none custom-scrollbar"
                     />
                   </div>
 
@@ -168,7 +197,7 @@ export default function ProfileModal({ isOpen, onClose, targetNickname, onMessag
                     <select 
                       value={editForm.gender}
                       onChange={e => setEditForm(prev => ({ ...prev, gender: e.target.value }))}
-                      className="w-full bg-secondary/50 border border-border rounded-xl px-3 py-2 text-sm text-text focus:outline-none focus:border-primary transition-colors appearance-none"
+                      className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm text-text focus:outline-none focus:border-primary transition-colors appearance-none"
                     >
                       <option value="Tidak Dispesifikasikan">Tidak Dispesifikasikan</option>
                       <option value="Laki-laki">Laki-laki</option>
@@ -186,7 +215,7 @@ export default function ProfileModal({ isOpen, onClose, targetNickname, onMessag
                       value={editForm.location}
                       onChange={e => setEditForm(prev => ({ ...prev, location: e.target.value }))}
                       placeholder="Contoh: Jakarta, Indonesia"
-                      className="w-full bg-secondary/50 border border-border rounded-xl px-3 py-2 text-sm text-text focus:outline-none focus:border-primary transition-colors placeholder:text-textMuted/50"
+                      className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm text-text focus:outline-none focus:border-primary transition-colors placeholder:text-textMuted/50"
                     />
                   </div>
                 </div>
