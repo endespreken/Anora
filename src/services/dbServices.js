@@ -612,22 +612,24 @@ export const uploadFileToR2 = async (file, isVibe = false) => {
   }
 };
 
-export const deleteVibe = async (vibeId) => {
+export const deleteVibe = async (vibeId, pin) => {
   try {
-    const { error, count } = await supabase
-      .from('vibes')
-      .delete({ count: 'exact' })
-      .eq('id', vibeId);
+    if (!pin) {
+      console.error("Missing PIN for deletion.");
+      return false;
+    }
+
+    const { data, error } = await supabase
+      .rpc('delete_vibe_with_pin', {
+        p_vibe_id: vibeId,
+        p_pin: pin
+      });
       
-    if (error) {
-      console.error("Error deleting vibe:", error);
+    if (error || data !== true) {
+      console.error("Error deleting vibe via RPC:", error);
       return false;
     }
-    if (count === 0) {
-      console.warn("Delete blocked by RLS or vibe not found.");
-      // Even if count is 0, we can return false to trigger the alert
-      return false;
-    }
+
     return true;
   } catch (error) {
     console.error("Exception deleting vibe:", error);
