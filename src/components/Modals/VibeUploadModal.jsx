@@ -179,23 +179,27 @@ export default function VibeUploadModal({ isOpen, onClose }) {
       </div>
 
       {/* Color Picker & Image Upload */}
-      <div className="mt-8 flex items-center justify-center space-x-4 overflow-x-auto py-4 px-2">
-        <label className="w-10 h-10 rounded-full bg-secondary flex flex-shrink-0 items-center justify-center cursor-pointer hover:bg-secondary/80 transition-colors text-textMuted hover:text-text shadow-sm border border-border">
-          <input type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
-          <ImageIcon size={20} />
-        </label>
-        
-        <div className="h-6 w-px bg-border mx-2 flex-shrink-0"></div>
+      <div className="mt-4 sm:mt-8 w-full">
+        <div className="flex items-center justify-start sm:justify-center space-x-3 overflow-x-auto py-4 px-2 no-scrollbar w-full">
+          <label className="w-10 h-10 rounded-full bg-secondary flex flex-shrink-0 items-center justify-center cursor-pointer hover:bg-secondary/80 transition-colors text-textMuted hover:text-text shadow-sm border border-border ml-2 sm:ml-0">
+            <input type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
+            <ImageIcon size={20} />
+          </label>
+          
+          <div className="h-6 w-px bg-border mx-1 flex-shrink-0"></div>
 
-        {BG_COLORS.map((bg, idx) => (
-          <button
-            key={idx}
-            onClick={() => setColorIndex(idx)}
-            className={`w-8 h-8 rounded-full flex-shrink-0 transition-all ${bg} ${
-              colorIndex === idx ? 'scale-110 ring-2 ring-white ring-offset-4 ring-offset-black opacity-100' : 'hover:scale-110 opacity-50 hover:opacity-100'
-            }`}
-          />
-        ))}
+          {BG_COLORS.map((bg, idx) => (
+            <button
+              key={idx}
+              onClick={() => setColorIndex(idx)}
+              className={`w-8 h-8 rounded-full flex-shrink-0 transition-all ${bg} ${
+                colorIndex === idx ? 'scale-110 ring-2 ring-white ring-offset-4 ring-offset-black opacity-100' : 'hover:scale-110 opacity-50 hover:opacity-100'
+              }`}
+            />
+          ))}
+          {/* Add a spacer at the end for mobile scroll padding */}
+          <div className="w-2 flex-shrink-0 sm:hidden"></div>
+        </div>
       </div>
     </div>
   );
