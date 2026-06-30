@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Moon, Sun, Hash, Menu, MessageCircle, ArrowLeft, Lock, Settings, MoreVertical, Bookmark, BookmarkCheck, BadgeCheck } from 'lucide-react';
+import { Users, Moon, Sun, Hash, Menu, MessageCircle, ArrowLeft, Lock, Settings, MoreVertical, Bookmark, BookmarkCheck, BadgeCheck, LogIn, UserPlus, Edit, XCircle } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import UserAvatar from '../Shared/UserAvatar';
@@ -7,10 +7,27 @@ import UserAvatar from '../Shared/UserAvatar';
 export default function Header({ 
   currentChannel, onlineUsers = [], onMenuClick, onUserClick, 
   isMobileChatOpen, onBack, onShowMembers, onSettingsClick,
-  isFollowing, onToggleFollow, onProfileClick
+  isFollowing, onToggleFollow, onProfileClick,
+  onLoginClick, onChangeNicknameClick, onAddFriendClick, onJoinChannelClick, onCloseChat
 }) {
   const { theme, toggleTheme } = useTheme();
   const { pseudo, isRegistered } = useAuth();
+  
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const isPrivateChannel = currentChannel.startsWith('@');
   const displayChannelName = isPrivateChannel
@@ -101,9 +118,63 @@ export default function Header({
           className="p-2.5 rounded-full hover:bg-secondary/50 text-textMuted hover:text-text transition-all duration-200 border border-transparent hover:border-border shadow-sm"
           title="Pengaturan"
         >
-          <Settings size={18} className="hidden md:block" />
-          <MoreVertical size={20} className="block md:hidden" />
+          <Settings size={18} />
         </button>
+        
+        <div className="relative" ref={dropdownRef}>
+          <button 
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="p-2.5 rounded-full hover:bg-secondary/50 text-textMuted hover:text-text transition-all duration-200 border border-transparent hover:border-border shadow-sm"
+            title="Menu Lainnya"
+          >
+            <MoreVertical size={20} />
+          </button>
+          
+          {isDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-surface border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {!isRegistered && (
+                <button
+                  onClick={() => { setIsDropdownOpen(false); onLoginClick?.(); }}
+                  className="w-full text-left px-4 py-3 text-sm text-text hover:bg-secondary/50 flex items-center gap-2 transition-colors"
+                >
+                  <LogIn size={16} className="text-primary" />
+                  Log in Nickname
+                </button>
+              )}
+              <button
+                onClick={() => { setIsDropdownOpen(false); onAddFriendClick?.(); }}
+                className="w-full text-left px-4 py-3 text-sm text-text hover:bg-secondary/50 flex items-center gap-2 transition-colors"
+              >
+                <UserPlus size={16} className="text-accent" />
+                Tambah Teman
+              </button>
+              <button
+                onClick={() => { setIsDropdownOpen(false); onChangeNicknameClick?.(); }}
+                className="w-full text-left px-4 py-3 text-sm text-text hover:bg-secondary/50 flex items-center gap-2 transition-colors"
+              >
+                <Edit size={16} className="text-blue-500" />
+                Ganti Nickname
+              </button>
+              <div className="h-[1px] bg-border my-1"></div>
+              <button
+                onClick={() => { setIsDropdownOpen(false); onJoinChannelClick?.(); }}
+                className="w-full text-left px-4 py-3 text-sm text-text hover:bg-secondary/50 flex items-center gap-2 transition-colors"
+              >
+                <Hash size={16} className="text-primary" />
+                Join Channel
+              </button>
+              {currentChannel !== 'random' && (
+                <button
+                  onClick={() => { setIsDropdownOpen(false); onCloseChat?.(); }}
+                  className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2 transition-colors border-t border-border mt-1"
+                >
+                  <XCircle size={16} />
+                  Tutup Obrolan
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

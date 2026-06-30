@@ -62,7 +62,7 @@ export default function FollowPinModal({ isOpen, onClose, targetUserNick, onSubm
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
                   placeholder="Contoh: a1b2c3"
-                  className="w-full bg-secondary/30 border border-border text-text text-sm rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent block pl-11 p-3.5 transition-all outline-none"
+                  className="w-full bg-secondary border border-border text-text text-sm rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent block pl-11 p-3.5 transition-all outline-none"
                   maxLength={6}
                 />
               </div>

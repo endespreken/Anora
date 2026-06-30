@@ -12,6 +12,9 @@ import NotificationsModal from './components/Modals/NotificationsModal';
 import FollowPinModal from './components/Modals/FollowPinModal';
 import UnfollowConfirmModal from './components/Modals/UnfollowConfirmModal';
 import ProfileModal from './components/Modals/ProfileModal';
+import LoginModal from './components/Modals/LoginModal';
+import ChangeNicknameModal from './components/Modals/ChangeNicknameModal';
+import JoinChannelModal from './components/Modals/JoinChannelModal';
 import { useChatRealtime } from './hooks/useChatRealtime';
 import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
@@ -30,6 +33,12 @@ function App() {
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
+  
+  // New Header Context Menu Modals
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isChangeNicknameModalOpen, setIsChangeNicknameModalOpen] = useState(false);
+  const [isJoinChannelModalOpen, setIsJoinChannelModalOpen] = useState(false);
+  
   const [pendingVibeReply, setPendingVibeReply] = useState(null);
   const [activeMobileTab, setActiveMobileTab] = useState('pms');
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
@@ -437,6 +446,17 @@ function App() {
     setReplyingTo(null);
   };
 
+  const handleCloseChat = () => {
+    if (currentChannel === 'random') return;
+    
+    if (currentChannel.startsWith('@')) {
+      updatePrivateChannels(prev => prev.filter(c => c !== currentChannel));
+    } else {
+      setJoinedSpaces(prev => prev.filter(s => s !== currentChannel));
+    }
+    setCurrentChannel('random');
+  };
+
   const handleToggleFollow = async () => {
     if (!isRegistered) return;
     
@@ -634,6 +654,11 @@ function App() {
           onShowMembers={() => setIsOnlineModalOpen(true)}
           onSettingsClick={() => setIsSettingsModalOpen(true)}
           onProfileClick={openProfileModal}
+          onLoginClick={() => setIsLoginModalOpen(true)}
+          onChangeNicknameClick={() => setIsChangeNicknameModalOpen(true)}
+          onJoinChannelClick={() => setIsJoinChannelModalOpen(true)}
+          onAddFriendClick={() => setIsFollowPinModalOpen(true)}
+          onCloseChat={handleCloseChat}
           isFollowing={
             currentChannel.startsWith('@')
               ? friendNicks.some(n => n.toLowerCase() === (currentChannel.replace('@', '').split('-').find(p => p !== pseudo) || '').toLowerCase())
@@ -715,6 +740,22 @@ function App() {
       <NotificationsModal 
         isOpen={isNotificationsModalOpen}
         onClose={() => setIsNotificationsModalOpen(false)}
+      />
+
+      <LoginModal 
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+      />
+
+      <ChangeNicknameModal
+        isOpen={isChangeNicknameModalOpen}
+        onClose={() => setIsChangeNicknameModalOpen(false)}
+      />
+
+      <JoinChannelModal
+        isOpen={isJoinChannelModalOpen}
+        onClose={() => setIsJoinChannelModalOpen(false)}
+        onJoin={changeChannel}
       />
     </div>
   );

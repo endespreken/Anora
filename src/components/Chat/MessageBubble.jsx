@@ -34,6 +34,31 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
   const repliedMessage = reply_to_id ? allMessages.find(m => m.id === reply_to_id) : null;
   const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
+  const isMentioned = !isOwn && pseudo && content && (() => {
+    const matches = content.match(/@([a-zA-Z0-9_]+)/g);
+    if (!matches) return false;
+    return matches.some(match => match.substring(1).toLowerCase() === pseudo.toLowerCase());
+  })();
+
+  const renderMessageContent = (text) => {
+    if (!text) return null;
+    const parts = text.split(/(@[a-zA-Z0-9_]+)/g);
+    
+    return parts.map((part, i) => {
+      if (part.startsWith('@') && part.length > 1) {
+        const mentionedNick = part.substring(1);
+        const isMe = pseudo && mentionedNick.toLowerCase() === pseudo.toLowerCase();
+        
+        return (
+          <span key={i} className={`font-semibold rounded-sm px-1.5 py-0.5 mx-0.5 ${isMe ? (isOwn ? 'bg-white/20 text-white' : 'bg-yellow-500/40 text-yellow-800 dark:text-yellow-300') : (isOwn ? 'text-white/90 bg-white/10' : 'text-primary bg-primary/10')}`}>
+            {emoji(part)}
+          </span>
+        );
+      }
+      return <React.Fragment key={i}>{emoji(part)}</React.Fragment>;
+    });
+  };
+
   const handleTouchStart = (e) => {
     const touch = e.touches[0];
     touchStart.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
@@ -141,6 +166,11 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
             {allRegisteredNicks.some(nick => nick.toLowerCase() === user_pseudo.toLowerCase()) && (
               <BadgeCheck size={13} className="ml-1 text-blue-500 flex-shrink-0" />
             )}
+            {isMentioned && (
+              <span className="ml-2 text-yellow-600 dark:text-yellow-500 font-bold flex items-center bg-yellow-500/20 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider border border-yellow-500/30">
+                Mentioned You
+              </span>
+            )}
           </div>
         )}
         
@@ -152,9 +182,11 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
             className={`px-4 py-2 pt-3 shadow-md relative w-full ${
               isBeacon 
                 ? 'bg-surface border border-accent text-text rounded-2xl animate-pulse-slow shadow-accent/20'
-                : isOwn 
-                  ? 'bg-gradient-to-br from-primary to-primaryHover text-white rounded-2xl rounded-tr-sm shadow-primary/20' 
-                  : 'bg-surface border border-border text-text rounded-2xl rounded-tl-sm'
+                : isMentioned 
+                  ? 'bg-yellow-500/10 border-2 border-yellow-500/50 text-text rounded-2xl rounded-tl-sm shadow-yellow-500/20'
+                  : isOwn 
+                    ? 'bg-gradient-to-br from-primary to-primaryHover text-white rounded-2xl rounded-tr-sm shadow-primary/20' 
+                    : 'bg-surface border border-border text-text rounded-2xl rounded-tl-sm'
             }`}
             style={{ 
               transform: `translateX(${swipeOffset}px)`,
@@ -200,7 +232,7 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
               <div className="flex items-start pr-4">
                 {isBeacon && <Radio size={16} className="text-accent mr-2 mt-0.5 shrink-0" />}
                 <span className={`leading-relaxed whitespace-pre-wrap break-words ${isBeacon ? 'font-medium' : ''}`}>
-                  {isBeacon ? emoji(content.replace('[BEACON SIGNAL]:', '').trim()) : emoji(content)}
+                  {isBeacon ? renderMessageContent(content.replace('[BEACON SIGNAL]:', '').trim()) : renderMessageContent(content)}
                 </span>
               </div>
               
