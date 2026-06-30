@@ -1,21 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Eye, Send, Heart, Flame, Smile, BadgeCheck } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Eye, Send, Heart, Flame, Smile, BadgeCheck, MoreVertical, Trash2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { recordVibeView } from '../../services/dbServices';
+import { recordVibeView, deleteVibe } from '../../services/dbServices';
 import { timeAgo } from '../../utils/timeAgo';
 import UserAvatar from '../Shared/UserAvatar';
 
-export default function VibeViewerModal({ isOpen, onClose, vibesList, initialIndex, onReply }) {
-  const { pseudo, allRegisteredNicks } = useAuth();
+export default function VibeViewerModal({ isOpen, onClose, vibesList, initialIndex, onReply, onVibeDeleted }) {
+  const { pseudo, allRegisteredNicks, permanentPin } = useAuth();
   const [currentUserIndex, setCurrentUserIndex] = useState(initialIndex);
   const [currentVibeIndex, setCurrentVibeIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [replyText, setReplyText] = useState('');
   const [showViews, setShowViews] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
 
   const currentUserObj = vibesList[currentUserIndex];
   const currentVibe = currentUserObj?.vibes[currentVibeIndex];
+
+  let parsedContent = currentVibe?.content || '';
+  let textPos = null;
+  try {
+    const data = JSON.parse(parsedContent);
+    if (data && data.text && data.pos) {
+      parsedContent = data.text;
+      textPos = data.pos;
+    }
+  } catch (e) {
+    // legacy format, keep as is
+  }
 
   useEffect(() => {
     if (!isOpen || !currentVibe) return;
@@ -28,10 +42,12 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
     setProgress(0);
     setReplyText('');
     setShowViews(false);
+    setShowOptions(false);
+    setShowConfirmDelete(false);
   }, [currentUserIndex, currentVibeIndex, isOpen]);
 
-  // Pause timer when typing reply or showing views
-  const isPaused = replyText.length > 0 || showViews || isInputFocused;
+  // Pause timer when typing reply or showing views or options or confirm
+  const isPaused = replyText.length > 0 || showViews || showOptions || showConfirmDelete || isInputFocused;
 
   useEffect(() => {
     if (!isOpen || !currentVibe || isPaused) return;
@@ -77,7 +93,7 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
 
   const handleSendReply = (text = replyText) => {
     if (!text.trim()) return;
-    const msg = `[Membalas Vibe: "${currentVibe.content}"]\n${text.trim()}`;
+    const msg = `[Membalas Vibe: "${parsedContent}"]\n${text.trim()}`;
     if (onReply) {
       onReply(currentUserObj.nickname, msg);
     }
@@ -85,6 +101,19 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
   };
 
   const isMyVibe = currentUserObj.nickname === pseudo;
+
+  const handleDeleteVibe = async (e) => {
+    if (e) e.stopPropagation();
+    const success = await deleteVibe(currentVibe.id);
+    if (success) {
+      if (onVibeDeleted) onVibeDeleted();
+      setShowConfirmDelete(false);
+      onClose(); // Just close the modal immediately after deleting
+    } else {
+      alert("Gagal menghapus Vibe. Pastikan sesi login Anda valid atau coba muat ulang aplikasi.");
+      setShowConfirmDelete(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[400] bg-black flex flex-col animate-fade-in touch-none">
@@ -121,16 +150,58 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
             </span>
           </div>
         </div>
-        <button onClick={onClose} className="p-2 text-white/80 hover:text-white rounded-full">
-          <X size={24} />
-        </button>
+        <div className="flex items-center space-x-2">
+          {isMyVibe && (
+            <div className="relative pointer-events-auto">
+              <button onClick={() => setShowOptions(!showOptions)} className="p-2 text-white/80 hover:text-white rounded-full">
+                <MoreVertical size={24} className="drop-shadow-md" />
+              </button>
+              {showOptions && (
+                <div className="absolute right-0 mt-2 w-48 bg-surface rounded-xl shadow-xl border border-white/10 overflow-hidden z-50">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowOptions(false);
+                      setShowConfirmDelete(true);
+                    }}
+                    className="w-full flex items-center px-4 py-3 text-red-500 hover:bg-white/5 active:bg-white/10 transition-colors"
+                  >
+                    <Trash2 size={18} className="mr-3" />
+                    <span className="font-bold">Hapus Vibe</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          <button onClick={onClose} className="p-2 text-white/80 hover:text-white rounded-full pointer-events-auto">
+            <X size={24} className="drop-shadow-md" />
+          </button>
+        </div>
       </div>
 
       {/* Main Content Area */}
-      <div className={`flex-1 w-full h-full flex items-center justify-center p-8 ${currentVibe.bg_color}`}>
-        <p className="text-white text-3xl font-bold text-center leading-relaxed whitespace-pre-wrap break-words drop-shadow-lg">
-          {currentVibe.content}
-        </p>
+      <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-0 sm:p-8 pointer-events-none z-0">
+        <div 
+          className={`w-full aspect-[9/16] max-h-full sm:max-w-sm rounded-none sm:rounded-3xl mx-auto flex items-center justify-center relative overflow-hidden ${!(currentVibe.bg_color || '').startsWith('img:') ? currentVibe.bg_color : 'bg-black'}`}
+          style={(currentVibe.bg_color || '').startsWith('img:') ? { backgroundImage: `url(${(currentVibe.bg_color || '').substring(4).replace('pub-f591f14e39f84bdc80676d77036d98b2.r2.dev', 'media.anorachat.com')})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' } : {}}
+        >
+          {(currentVibe.bg_color || '').startsWith('img:') && (
+            <div className="absolute inset-0 bg-black/10 rounded-none sm:rounded-3xl backdrop-blur-[1px]"></div>
+          )}
+          
+          <div 
+            className={`w-full px-8 relative z-10 ${textPos ? 'absolute' : ''}`}
+            style={textPos ? {
+              top: `${textPos.y}%`,
+              left: `${textPos.x}%`,
+              transform: 'translate(-50%, -50%)'
+            } : {}}
+          >
+            <p className={`text-white text-3xl font-bold text-center leading-relaxed whitespace-pre-wrap break-words ${(currentVibe.bg_color || '').startsWith('img:') ? 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]' : ''}`}>
+              {parsedContent}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Touch Areas for Navigation (disabled if views or reply active) */}
@@ -141,12 +212,47 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
         </div>
       )}
 
-      {/* Overlay to close views when tapping anywhere outside */}
-      {showViews && (
+      {/* Overlay to close views or options when tapping anywhere outside */}
+      {(showViews || showOptions || showConfirmDelete) && (
         <div 
           className="absolute inset-0 z-10" 
-          onClick={() => setShowViews(false)}
+          onClick={() => {
+            setShowViews(false);
+            setShowOptions(false);
+            if (!showConfirmDelete) { // Don't close confirm dialog when tapping outside to prevent accidental dismiss? No, better let them tap outside to cancel.
+              setShowConfirmDelete(false);
+            } else {
+              setShowConfirmDelete(false);
+            }
+          }}
         ></div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {showConfirmDelete && (
+        <div className="absolute inset-0 flex items-center justify-center z-[500] px-4 animate-fade-in pointer-events-auto">
+          <div className="bg-surface/95 backdrop-blur-md p-6 rounded-3xl w-full max-w-sm border border-white/10 shadow-2xl relative z-10">
+            <h3 className="text-xl font-bold text-white mb-2 text-center">Hapus Vibe?</h3>
+            <p className="text-white/70 text-center mb-6 text-sm">Vibe ini akan dihapus permanen dan teman Anda tidak akan bisa melihatnya lagi.</p>
+            <div className="flex space-x-3">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowConfirmDelete(false);
+                }}
+                className="flex-1 py-3 px-4 rounded-xl font-bold text-white bg-white/10 hover:bg-white/20 active:scale-95 transition-all"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={handleDeleteVibe}
+                className="flex-1 py-3 px-4 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 active:scale-95 transition-all shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Bottom Area: Views (if owner) OR Reply (if other) */}

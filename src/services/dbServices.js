@@ -572,10 +572,11 @@ export const updateUserProfile = async (nickname, profileData) => {
   return true;
 };
 
-export const uploadFileToR2 = async (file) => {
+export const uploadFileToR2 = async (file, isVibe = false) => {
   try {
     const safeFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const { data, error } = await supabase.functions.invoke('generate-r2-url', {
+    const functionName = isVibe ? 'generate-vibe-url' : 'generate-r2-url';
+    const { data, error } = await supabase.functions.invoke(functionName, {
       body: { filename: safeFilename, contentType: file.type }
     });
     
@@ -584,8 +585,12 @@ export const uploadFileToR2 = async (file) => {
     let { signedUrl, publicUrl } = data;
     
     // Ensure publicUrl has https:// if user forgot it in their edge function env var
-    if (publicUrl && !publicUrl.startsWith('http')) {
-      publicUrl = 'https://' + publicUrl.replace(/^:\/\//, '');
+    if (publicUrl) {
+      if (!publicUrl.startsWith('http')) {
+        publicUrl = 'https://' + publicUrl.replace(/^:\/\//, '');
+      }
+      // Force custom domain replacing the default r2.dev domain
+      publicUrl = publicUrl.replace('pub-f591f14e39f84bdc80676d77036d98b2.r2.dev', 'media.anorachat.com');
     }
     
     const uploadResponse = await fetch(signedUrl, {
@@ -603,6 +608,29 @@ export const uploadFileToR2 = async (file) => {
     }
   } catch (err) {
     console.error("R2 Upload Error:", err);
-    return null;
+    throw err;
+  }
+};
+
+export const deleteVibe = async (vibeId) => {
+  try {
+    const { error, count } = await supabase
+      .from('vibes')
+      .delete({ count: 'exact' })
+      .eq('id', vibeId);
+      
+    if (error) {
+      console.error("Error deleting vibe:", error);
+      return false;
+    }
+    if (count === 0) {
+      console.warn("Delete blocked by RLS or vibe not found.");
+      // Even if count is 0, we can return false to trigger the alert
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("Exception deleting vibe:", error);
+    return false;
   }
 };

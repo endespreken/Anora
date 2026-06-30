@@ -120,15 +120,16 @@ export default function VibesBar({ friendNicks, onReply }) {
       </div>
 
       {isViewerOpen && selectedVibeIndex !== null && createPortal(
-        <VibeViewerModal 
-          isOpen={isViewerOpen} 
+        <VibeViewerModal
+          isOpen={isViewerOpen}
           onClose={() => {
             setIsViewerOpen(false);
             setSelectedVibeIndex(null);
-          }} 
-          vibesList={vibesList} 
-          initialIndex={selectedVibeIndex} 
+          }}
+          vibesList={vibesList}
+          initialIndex={selectedVibeIndex}
           onReply={onReply}
+          onVibeDeleted={loadVibes}
         />,
         document.body
       )}

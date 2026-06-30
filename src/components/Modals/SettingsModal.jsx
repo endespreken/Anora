@@ -18,6 +18,7 @@ export default function SettingsModal({ isOpen, onClose }) {
   
   const [activeTab, setActiveTab] = useState('profile');
   const [vibesVisibility, setVibesVisibility] = useState('friends_only');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (isOpen && isRegistered && pseudo) {
@@ -103,31 +104,52 @@ export default function SettingsModal({ isOpen, onClose }) {
                   </div>
                 </div>
 
-                {isRegistered && permanentPin && (
-                  <div className="p-4 bg-accent/10 rounded-2xl border border-accent/20">
-                    <h3 className="font-bold text-sm text-text mb-2 flex items-center">
-                      <BadgeCheck size={16} className="text-accent mr-2" />
-                      PIN Permanen Anda
-                    </h3>
-                    <p className="text-xs text-textMuted mb-3 leading-relaxed">
-                      Gunakan PIN ini untuk bertukar kontak dengan teman (Add Connection). PIN ini tidak akan pernah berubah.
-                    </p>
-                    <div className="flex items-center justify-center p-3 bg-background rounded-xl border border-border shadow-inner">
-                      <span className="font-mono text-2xl tracking-[0.3em] text-accent font-bold uppercase">{permanentPin}</span>
+                {isRegistered ? (
+                  permanentPin ? (
+                    <div className="p-4 bg-accent/10 rounded-2xl border border-accent/20">
+                      <h3 className="font-bold text-sm text-text mb-2 flex items-center">
+                        <BadgeCheck size={16} className="text-accent mr-2" />
+                        PIN Permanen Anda
+                      </h3>
+                      <p className="text-xs text-textMuted mb-3 leading-relaxed">
+                        Gunakan PIN ini untuk bertukar kontak dengan teman (Add Connection). PIN ini tidak akan pernah berubah.
+                      </p>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(permanentPin);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                        className="w-full relative group"
+                        title="Klik untuk menyalin PIN"
+                      >
+                        <div className="flex items-center justify-center p-3 bg-background rounded-xl border border-border shadow-inner group-hover:border-accent transition-colors">
+                          <span className="font-mono text-2xl tracking-[0.3em] text-accent font-bold uppercase">{permanentPin}</span>
+                        </div>
+                        <div className={`absolute inset-0 flex items-center justify-center transition-opacity rounded-xl ${copied ? 'bg-green-500/90 opacity-100' : 'bg-background/80 opacity-0 group-hover:opacity-100'}`}>
+                          <span className={`text-sm font-bold flex items-center ${copied ? 'text-white' : 'text-text'}`}>
+                            {copied ? 'Tersalin!' : 'Copy PIN'}
+                          </span>
+                        </div>
+                      </button>
                     </div>
+                  ) : (
+                    <div className="p-4 bg-accent/10 rounded-2xl border border-accent/20 flex items-center justify-center h-24">
+                      <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )
+                ) : (
+                  <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20">
+                    <h3 className="font-bold text-sm text-text mb-2">Ganti Nickname / Register</h3>
+                    <p className="text-xs text-textMuted mb-3 leading-relaxed">
+                      Untuk mengganti nickname atau melakukan registrasi, silakan kembali ke obrolan dan ketikkan perintah berikut:
+                    </p>
+                    <ul className="text-xs text-textMuted space-y-2 font-mono bg-background p-3 rounded-xl border border-border">
+                      <li><span className="text-primary font-bold">/nick</span> [nama_baru]</li>
+                      <li><span className="text-primary font-bold">/register</span> [nama] [pass] [email]</li>
+                    </ul>
                   </div>
                 )}
-
-                <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20">
-                  <h3 className="font-bold text-sm text-text mb-2">Ganti Nickname / Register</h3>
-                  <p className="text-xs text-textMuted mb-3 leading-relaxed">
-                    Untuk mengganti nickname atau melakukan registrasi, silakan kembali ke obrolan dan ketikkan perintah berikut:
-                  </p>
-                  <ul className="text-xs text-textMuted space-y-2 font-mono bg-background p-3 rounded-xl border border-border">
-                    <li><span className="text-primary font-bold">/nick</span> [nama_baru]</li>
-                    <li><span className="text-primary font-bold">/register</span> [nama] [pass] [email]</li>
-                  </ul>
-                </div>
               </div>
             )}
 

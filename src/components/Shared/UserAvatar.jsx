@@ -17,8 +17,8 @@ export default function UserAvatar({ nickname, className = "w-10 h-10 text-lg", 
   const formatUrl = (url) => {
     if (!url) return '';
     let cleanUrl = url.trim();
-    if (!cleanUrl.startsWith('http')) return 'https://' + cleanUrl.replace(/^:\/\//, '');
-    return cleanUrl;
+    if (!cleanUrl.startsWith('http')) cleanUrl = 'https://' + cleanUrl.replace(/^:\/\//, '');
+    return cleanUrl.replace('pub-f591f14e39f84bdc80676d77036d98b2.r2.dev', 'media.anorachat.com');
   };
 
   const initial = nickname ? nickname.charAt(0).toUpperCase() : '?';

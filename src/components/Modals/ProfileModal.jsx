@@ -24,8 +24,9 @@ export default function ProfileModal({ isOpen, onClose, targetNickname, onMessag
 
   const formatUrl = (url) => {
     if (!url) return '';
-    if (!url.startsWith('http')) return 'https://' + url.replace(/^:\/\//, '');
-    return url;
+    let cleanUrl = url;
+    if (!cleanUrl.startsWith('http')) cleanUrl = 'https://' + cleanUrl.replace(/^:\/\//, '');
+    return cleanUrl.replace('pub-f591f14e39f84bdc80676d77036d98b2.r2.dev', 'media.anorachat.com');
   };
 
   useEffect(() => {
