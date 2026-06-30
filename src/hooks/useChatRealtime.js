@@ -19,16 +19,32 @@ export function useChatRealtime(channel, user, pseudo) {
         const hasSeenWelcome = sessionStorage.getItem(`welcome_${channel}`);
         const isPrivateChannel = channel.startsWith('@');
         
-        if (!hasSeenWelcome && !isPrivateChannel) {
-          const welcomeMsg = {
-            id: `local-welcome-${Date.now()}`,
+        if (!hasSeenWelcome) {
+          const newMessages = [];
+          
+          const encryptMsg = {
+            id: `local-encrypt-${Date.now()}`,
             channel_name: channel,
-            user_pseudo: 'Anora 🤖',
-            content: `Selamat datang di channel ${channel}! Ketik /help apabila membutuhkan bantuan.`,
-            is_system_msg: false,
-            created_at: new Date().toISOString()
+            user_pseudo: 'System 🔒',
+            content: `Percakapan di dalam ${isPrivateChannel ? 'Private Message' : 'Room'} ini dilindungi oleh Enkripsi End-to-End (E2EE). Tidak ada seorang pun di luar obrolan ini yang dapat membaca pesan Anda.`,
+            is_system_msg: true,
+            created_at: new Date(Date.now() - 1000).toISOString()
           };
-          setMessages([...data, welcomeMsg]);
+          newMessages.push(encryptMsg);
+
+          if (!isPrivateChannel) {
+            const welcomeMsg = {
+              id: `local-welcome-${Date.now()}`,
+              channel_name: channel,
+              user_pseudo: 'Anora 🤖',
+              content: `Selamat datang di channel ${channel}! Ketik /help apabila membutuhkan bantuan.`,
+              is_system_msg: false,
+              created_at: new Date().toISOString()
+            };
+            newMessages.push(welcomeMsg);
+          }
+          
+          setMessages([...data, ...newMessages]);
           sessionStorage.setItem(`welcome_${channel}`, 'true');
         } else {
           setMessages([...data]);

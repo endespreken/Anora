@@ -26,18 +26,21 @@ export function AuthProvider({ children }) {
   const [allRegisteredNicks, setAllRegisteredNicks] = useState([]);
   const [registeredProfiles, setRegisteredProfiles] = useState({});
   const [permanentPin, setPermanentPin] = useState(null);
+  const [pendingRequests, setPendingRequests] = useState([]);
 
   useEffect(() => {
     if (isRegistered && pseudo) {
-      import('../services/dbServices').then(({ fetchUserPin }) => {
+      import('../services/dbServices').then(({ fetchUserPin, fetchPendingRequests }) => {
         fetchUserPin(pseudo).then(pin => {
           setPermanentPin(pin);
         });
+        fetchPendingRequests(user?.id || '').then(reqs => setPendingRequests(reqs));
       });
     } else {
       setPermanentPin(null);
+      setPendingRequests([]);
     }
-  }, [isRegistered, pseudo]);
+  }, [isRegistered, pseudo, user]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -108,6 +111,22 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isRegistered || !pseudo || !user?.id) return;
+
+    const friendLinksChannel = supabase.channel('friend_links_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_links' }, () => {
+        import('../services/dbServices').then(({ fetchPendingRequests }) => {
+          fetchPendingRequests(user.id).then(reqs => setPendingRequests(reqs));
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(friendLinksChannel);
+    };
+  }, [user?.id, isRegistered, pseudo]);
+
   const changePseudo = (newPseudo, registered = false) => {
     const oldPseudo = pseudo;
     if (oldPseudo && oldPseudo !== newPseudo) {
@@ -138,7 +157,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, pseudo, changePseudo, isRegistered, markAsRegistered, loading, allRegisteredNicks, registeredProfiles, permanentPin }}>
+    <AuthContext.Provider value={{ user, pseudo, changePseudo, isRegistered, markAsRegistered, loading, allRegisteredNicks, registeredProfiles, permanentPin, pendingRequests, setPendingRequests }}>
       {!loading && children}
     </AuthContext.Provider>
   );

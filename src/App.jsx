@@ -8,6 +8,7 @@ import PinGeneratorModal from './components/Modals/PinGeneratorModal';
 import NearbyUsersModal from './components/Modals/NearbyUsersModal';
 import OnlineUsersModal from './components/Modals/OnlineUsersModal';
 import SettingsModal from './components/Modals/SettingsModal';
+import NotificationsModal from './components/Modals/NotificationsModal';
 import FollowPinModal from './components/Modals/FollowPinModal';
 import UnfollowConfirmModal from './components/Modals/UnfollowConfirmModal';
 import ProfileModal from './components/Modals/ProfileModal';
@@ -28,6 +29,7 @@ function App() {
   const [isNearbyModalOpen, setIsNearbyModalOpen] = useState(false);
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
   const [pendingVibeReply, setPendingVibeReply] = useState(null);
   const [activeMobileTab, setActiveMobileTab] = useState('pms');
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
@@ -606,12 +608,14 @@ function App() {
           friends={friends}
           friendNicks={friendNicks}
           onSettingsClick={() => setIsSettingsModalOpen(true)}
-          onProfileClick={() => openProfileModal(pseudo)}
+          onProfileClick={(nickname) => openProfileModal(nickname)}
           onReply={handleVibeReply}
+          onNotificationsClick={() => setIsNotificationsModalOpen(true)}
         />
         <BottomNav 
           activeTab={activeMobileTab} 
           onChangeTab={setActiveMobileTab} 
+          onNotificationsClick={() => setIsNotificationsModalOpen(true)}
           unreadTabs={['spaces', 'pms'].filter(tab => {
             if (tab === 'pms') return Object.keys(unreadCounts).some(c => c.startsWith('@') && unreadCounts[c] > 0);
             if (tab === 'spaces') return Object.keys(unreadCounts).some(c => !c.startsWith('@') && unreadCounts[c] > 0);
@@ -706,6 +710,11 @@ function App() {
       <SettingsModal 
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
+      />
+      
+      <NotificationsModal 
+        isOpen={isNotificationsModalOpen}
+        onClose={() => setIsNotificationsModalOpen(false)}
       />
     </div>
   );

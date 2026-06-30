@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Hash, Radar, UserPlus, Zap, MapPin, X, Lock, Pin, MessageCircle, BadgeCheck, MoreVertical } from 'lucide-react';
+import { Hash, Radar, UserPlus, Zap, MapPin, X, Lock, Pin, MessageCircle, BadgeCheck, MoreVertical, Bell } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { fetchFriends } from '../../services/dbServices';
@@ -11,9 +11,9 @@ export default function Sidebar({
   unreadCounts = {}, privateChannels = [], closePrivateChannel, 
   joinedSpaces = ['random'], closeSpace, activeMobileTab = 'pms', 
   onMarkAsRead, pinnedChannels = [], onPinChat, globalTyping = {},
-  globalOnlineUsers = [], friends = [], friendNicks = [], onSettingsClick, onProfileClick, onReply
+  globalOnlineUsers = [], friends = [], friendNicks = [], onSettingsClick, onProfileClick, onReply, onNotificationsClick
 }) {
-  const { user, pseudo, allRegisteredNicks = [] } = useAuth();
+  const { user, pseudo, allRegisteredNicks = [], pendingRequests = [] } = useAuth();
   const [contextMenu, setContextMenu] = useState(null);
   const [isConnectionsModalOpen, setIsConnectionsModalOpen] = useState(false);
   const { vibrationEnabled } = useSettings();
@@ -72,13 +72,25 @@ export default function Sidebar({
         </div>
         <div className="flex items-center space-x-2">
           {user && (
-            <button 
-              onClick={onProfileClick}
-              className="p-1 text-textMuted hover:text-text hover:bg-secondary/50 rounded-full transition-colors"
-              title="Profil"
-            >
-              <UserAvatar nickname={pseudo} className="w-8 h-8 text-xs" />
-            </button>
+            <div className="flex items-center">
+              <button 
+                onClick={onNotificationsClick}
+                className="p-2 text-textMuted hover:text-text hover:bg-secondary/50 rounded-full transition-colors relative mr-1"
+                title="Notifikasi"
+              >
+                <Bell size={20} />
+                {pendingRequests?.length > 0 && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-surface"></span>
+                )}
+              </button>
+              <button 
+                onClick={() => onProfileClick(pseudo)}
+                className="p-1 text-textMuted hover:text-text hover:bg-secondary/50 rounded-full transition-colors"
+                title="Profil"
+              >
+                <UserAvatar nickname={pseudo} className="w-8 h-8 text-xs" />
+              </button>
+            </div>
           )}
           <button 
             onClick={onSettingsClick}

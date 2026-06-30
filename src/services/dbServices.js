@@ -104,15 +104,15 @@ export const addFriendWithPin = async (userId, pin) => {
     const { error: linkError } = await supabase
       .from('friend_links')
       .insert([
-        { user_a_id: userId, user_b_id: permData.user_id }
+        { user_a_id: userId, user_b_id: permData.user_id, status: 'pending' }
       ]);
 
     if (linkError) {
       console.error("Error creating friend link", linkError);
-      return { success: false, message: "Error creating friend link or already friends" };
+      return { success: false, message: "Error creating friend link or request already sent" };
     }
 
-    return { success: true, message: "Connection added successfully via Permanent PIN" };
+    return { success: true, message: "Permintaan pertemanan berhasil dikirim" };
   }
 
   // Find the temp pin
@@ -136,7 +136,7 @@ export const addFriendWithPin = async (userId, pin) => {
   const { error: linkError } = await supabase
     .from('friend_links')
     .insert([
-      { user_a_id: userId, user_b_id: pinData.user_id }
+      { user_a_id: userId, user_b_id: pinData.user_id, status: 'pending' }
     ]);
 
   if (linkError) {
@@ -147,7 +147,7 @@ export const addFriendWithPin = async (userId, pin) => {
   // Optionally delete the pin so it can't be reused
   await supabase.from('temp_pins').delete().eq('pin_code', pin);
 
-  return { success: true, message: "Connection added successfully" };
+  return { success: true, message: "Permintaan pertemanan berhasil dikirim" };
 };
 
 export const fetchFriends = async (userId) => {
@@ -155,6 +155,7 @@ export const fetchFriends = async (userId) => {
   const { data, error } = await supabase
     .from('friend_links')
     .select('*')
+    .eq('status', 'accepted')
     .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`);
 
   if (error) {
@@ -174,6 +175,7 @@ export const fetchFriendNicks = async (userId) => {
   const { data, error } = await supabase
     .from('friend_links')
     .select('user_a_id, user_b_id')
+    .eq('status', 'accepted')
     .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`);
 
   if (error || !data) {
@@ -202,6 +204,7 @@ export const checkIsFriend = async (myUserId, targetUserId) => {
   const { data, error } = await supabase
     .from('friend_links')
     .select('id')
+    .eq('status', 'accepted')
     .or(`and(user_a_id.eq.${myUserId},user_b_id.eq.${targetUserId}),and(user_a_id.eq.${targetUserId},user_b_id.eq.${myUserId})`)
     .maybeSingle();
     
@@ -210,6 +213,49 @@ export const checkIsFriend = async (myUserId, targetUserId) => {
     return false;
   }
   return !!data;
+};
+
+export const fetchPendingRequests = async (userId) => {
+  const { data, error } = await supabase
+    .from('friend_links')
+    .select('id, user_a_id, created_at')
+    .eq('user_b_id', userId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+    
+  if (error || !data || data.length === 0) return [];
+  
+  const senderIds = data.map(link => link.user_a_id);
+  const { data: usersData } = await supabase
+    .from('registered_users')
+    .select('user_id, nickname')
+    .in('user_id', senderIds);
+    
+  return data.map(link => {
+    const sender = usersData?.find(u => u.user_id === link.user_a_id);
+    return {
+      id: link.id,
+      sender_id: link.user_a_id,
+      sender_nickname: sender ? sender.nickname : 'Unknown User',
+      created_at: link.created_at
+    };
+  });
+};
+
+export const acceptFriendRequest = async (linkId) => {
+  const { error } = await supabase
+    .from('friend_links')
+    .update({ status: 'accepted' })
+    .eq('id', linkId);
+  return !error;
+};
+
+export const rejectFriendRequest = async (linkId) => {
+  const { error } = await supabase
+    .from('friend_links')
+    .delete()
+    .eq('id', linkId);
+  return !error;
 };
 
 export const removeFriend = async (myUserId, targetNick) => {
