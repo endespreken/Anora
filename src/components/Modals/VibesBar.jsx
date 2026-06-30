@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import VibeViewerModal from './VibeViewerModal';
 import VibeUploadModal from './VibeUploadModal';
 import { fetchActiveVibes } from '../../services/dbServices';
+import UserAvatar from '../Shared/UserAvatar';
 
 export default function VibesBar({ friendNicks, onReply }) {
   const { user, isRegistered, pseudo } = useAuth();
@@ -76,9 +77,7 @@ export default function VibesBar({ friendNicks, onReply }) {
                   ? 'border-[3px] border-primary p-0.5' 
                   : 'bg-secondary border border-border group-hover:border-primary/50'
               }`}>
-                <div className={`w-full h-full rounded-full flex items-center justify-center text-textMuted ${hasMyVibes ? 'bg-secondary' : ''}`}>
-                  {pseudo ? pseudo.charAt(0).toUpperCase() : '?'}
-                </div>
+                <UserAvatar nickname={pseudo} className={`w-full h-full text-textMuted ${hasMyVibes ? 'bg-secondary' : ''}`} />
               </div>
               
               <div 
@@ -109,9 +108,7 @@ export default function VibesBar({ friendNicks, onReply }) {
                 onClick={() => handleVibeClick(realIndex)}
               >
                 <div className="w-14 h-14 rounded-full p-[3px] bg-gradient-to-tr from-accent to-primary mb-1">
-                  <div className="w-full h-full rounded-full border-2 border-surface bg-secondary flex items-center justify-center font-bold text-text">
-                    {userVibes.nickname.charAt(0).toUpperCase()}
-                  </div>
+                  <UserAvatar nickname={userVibes.nickname} className="w-full h-full border-2 border-surface bg-secondary text-text font-bold" />
                 </div>
                 <span className="text-xs font-medium text-text w-16 text-center truncate">
                   {userVibes.nickname}

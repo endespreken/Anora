@@ -1,6 +1,7 @@
 import React from 'react';
 import { Users, X, MessageCircle, BadgeCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import UserAvatar from '../Shared/UserAvatar';
 
 export default function OnlineUsersModal({ isOpen, onClose, onlineUsers, onUserClick }) {
   const { pseudo, allRegisteredNicks = [], isRegistered } = useAuth();
@@ -50,7 +51,8 @@ export default function OnlineUsersModal({ isOpen, onClose, onlineUsers, onUserC
                     }`}
                   >
                     <div className="flex items-center">
-                      <span className="w-2.5 h-2.5 rounded-full bg-green-500 mr-3 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+                      <UserAvatar nickname={u.pseudo} className="w-8 h-8 text-xs mr-3 shadow-sm" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-green-500 mr-2 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
                       <span className={`text-sm flex items-center ${u.pseudo === pseudo ? 'font-semibold text-text' : 'text-textMuted group-hover:text-text'}`}>
                         {u.pseudo} {u.pseudo === pseudo && '(You)'}
                         {allRegisteredNicks.some(nick => nick.toLowerCase() === u.pseudo.toLowerCase()) && (

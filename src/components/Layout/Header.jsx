@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Users, Moon, Sun, Hash, Menu, MessageCircle, ArrowLeft, Lock, Settings, MoreVertical, Bookmark, BookmarkCheck, BadgeCheck } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import UserAvatar from '../Shared/UserAvatar';
 
 export default function Header({ 
   currentChannel, onlineUsers = [], onMenuClick, onUserClick, 
@@ -39,7 +40,7 @@ export default function Header({
         )}
         <div className="flex items-center text-text">
           {isPrivateChannel ? (
-            <Lock size={20} className="text-primary mr-1.5 md:mr-2 md:w-6 md:h-6" />
+            <UserAvatar nickname={displayChannelName} className="w-8 h-8 mr-2 md:mr-3 text-xs shadow-sm" />
           ) : (
             <Hash size={20} className="text-primary mr-1.5 md:mr-2 md:w-6 md:h-6" />
           )}

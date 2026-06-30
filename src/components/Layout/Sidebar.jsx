@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { fetchFriends } from '../../services/dbServices';
 import VibesBar from '../Modals/VibesBar';
+import UserAvatar from '../Shared/UserAvatar';
 
 export default function Sidebar({ 
   currentChannel, changeChannel, openPinModal, openNearbyModal, 
@@ -73,11 +74,10 @@ export default function Sidebar({
           {user && (
             <button 
               onClick={onProfileClick}
-              className="p-2 text-textMuted hover:text-text hover:bg-secondary/50 rounded-lg transition-colors"
+              className="p-1 text-textMuted hover:text-text hover:bg-secondary/50 rounded-full transition-colors"
               title="Profil"
             >
-              <UserPlus size={20} className="hidden" /> {/* Using User icon */}
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              <UserAvatar nickname={pseudo} className="w-8 h-8 text-xs" />
             </button>
           )}
           <button 
@@ -279,9 +279,7 @@ export default function Sidebar({
                 if (onlineUser) {
                   acc.push(
                     <li key={friendId} className="px-3 py-2 rounded-xl text-sm text-text flex items-center hover:bg-secondary/30 transition-colors cursor-default">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-secondary to-border flex items-center justify-center mr-3 shadow-inner">
-                        <Radar size={14} className="text-textMuted" />
-                      </div>
+                      <UserAvatar nickname={onlineUser.pseudo} className="w-8 h-8 text-xs mr-3 shadow-inner" />
                       <span className="font-semibold">{onlineUser.pseudo}</span>
                       <span className="ml-auto w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
                     </li>

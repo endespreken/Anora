@@ -3,6 +3,7 @@ import { X, ChevronLeft, ChevronRight, Eye, Send, Heart, Flame, Smile, BadgeChec
 import { useAuth } from '../../contexts/AuthContext';
 import { recordVibeView } from '../../services/dbServices';
 import { timeAgo } from '../../utils/timeAgo';
+import UserAvatar from '../Shared/UserAvatar';
 
 export default function VibeViewerModal({ isOpen, onClose, vibesList, initialIndex, onReply }) {
   const { pseudo, allRegisteredNicks } = useAuth();
@@ -105,9 +106,7 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
       {/* Header */}
       <div className="absolute top-6 left-0 w-full px-4 flex items-center justify-between z-10">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-text border border-white/20">
-            {currentUserObj.nickname.charAt(0).toUpperCase()}
-          </div>
+          <UserAvatar nickname={currentUserObj.nickname} className="w-10 h-10 border border-white/20 font-bold" />
           <div className="flex flex-col">
             <div className="flex items-center space-x-1">
               <span className="font-bold text-white shadow-sm drop-shadow-md">
@@ -194,7 +193,7 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
           </div>
         ) : (
           <div className="p-4 bg-gradient-to-t from-black/80 to-transparent pointer-events-auto">
-            <div className="flex items-center space-x-3 max-w-lg mx-auto">
+            <div className="flex items-center space-x-2 sm:space-x-3 max-w-lg mx-auto">
               <input 
                 type="text"
                 placeholder="Balas Vibe ini..."
@@ -203,17 +202,17 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
                 onFocus={() => setIsInputFocused(true)}
                 onBlur={() => setIsInputFocused(false)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendReply()}
-                className="flex-1 bg-white/20 text-white placeholder:text-white/60 border border-white/30 rounded-full px-5 py-3 outline-none focus:bg-white/30 transition-colors backdrop-blur-md shadow-lg"
+                className="flex-1 min-w-0 bg-white/20 text-white placeholder:text-white/60 border border-white/30 rounded-full px-4 sm:px-5 py-2.5 sm:py-3 outline-none focus:bg-white/30 transition-colors backdrop-blur-md shadow-lg text-sm sm:text-base"
               />
               {replyText.trim() ? (
                 <button 
                   onClick={() => handleSendReply()}
-                  className="p-3 bg-primary text-white rounded-full active:scale-95 transition-transform shadow-lg"
+                  className="flex-shrink-0 p-2.5 sm:p-3 bg-primary text-white rounded-full active:scale-95 transition-transform shadow-lg mx-1"
                 >
-                  <Send size={20} />
+                  <Send size={18} className="sm:w-5 sm:h-5" />
                 </button>
               ) : (
-                <div className="flex items-center space-x-2 text-2xl">
+                <div className="flex items-center space-x-3 sm:space-x-4 text-xl sm:text-2xl flex-shrink-0 px-2">
                   <button onClick={() => handleSendReply("❤️")} className="hover:scale-125 transition-transform drop-shadow-md">❤️</button>
                   <button onClick={() => handleSendReply("😂")} className="hover:scale-125 transition-transform drop-shadow-md">😂</button>
                   <button onClick={() => handleSendReply("🔥")} className="hover:scale-125 transition-transform drop-shadow-md">🔥</button>

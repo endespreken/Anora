@@ -55,15 +55,17 @@ export default function ProfileModal({ isOpen, onClose, targetNickname, onMessag
         // Not JSON, fallback to standard bio
       }
 
+      // Update the profile object we show
+      let safeAvatar = data.avatar_url || '';
+
       setEditForm({
-        avatar_url: data.avatar_url || '',
+        avatar_url: safeAvatar,
         bio: parsedBio || '',
         gender: data.gender || 'Tidak Dispesifikasikan',
         location: parsedLoc || ''
       });
       
-      // Update the profile object we show
-      setProfile(prev => ({...prev, bio: parsedBio, location: parsedLoc}));
+      setProfile(prev => ({...prev, avatar_url: safeAvatar, bio: parsedBio, location: parsedLoc}));
     }
     setLoading(false);
   };
@@ -141,11 +143,11 @@ export default function ProfileModal({ isOpen, onClose, targetNickname, onMessag
               <div className="relative mb-4 group">
                 <div className="w-24 h-24 rounded-full bg-secondary overflow-hidden border-4 border-surface shadow-md relative">
                   {localAvatarPreview ? (
-                    <img src={localAvatarPreview} alt={profile.nickname} className="w-full h-full object-cover bg-surface" />
+                    <img src={localAvatarPreview} alt={profile.nickname} referrerPolicy="no-referrer" className="w-full h-full object-cover bg-surface" />
                   ) : isEditing && editForm.avatar_url ? (
-                    <img src={formatUrl(editForm.avatar_url)} alt={profile.nickname} className="w-full h-full object-cover bg-surface" onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${profile.nickname}&background=random`; }} />
+                    <img src={formatUrl(editForm.avatar_url)} alt={profile.nickname} referrerPolicy="no-referrer" className="w-full h-full object-cover bg-surface" onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${profile.nickname}&background=random`; }} />
                   ) : profile.avatar_url ? (
-                    <img src={formatUrl(profile.avatar_url)} alt={profile.nickname} className="w-full h-full object-cover bg-surface" onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${profile.nickname}&background=random`; }} />
+                    <img src={formatUrl(profile.avatar_url)} alt={profile.nickname} referrerPolicy="no-referrer" className="w-full h-full object-cover bg-surface" onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${profile.nickname}&background=random`; }} />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20 text-primary">
                       <User size={40} />

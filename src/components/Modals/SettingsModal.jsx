@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { fetchVibesVisibility, updateVibesVisibility } from '../../services/dbServices';
+import UserAvatar from '../Shared/UserAvatar';
 
 export default function SettingsModal({ isOpen, onClose }) {
   const { pseudo, isRegistered, allRegisteredNicks, permanentPin } = useAuth();
@@ -91,9 +92,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                 <div>
                   <label className="text-xs font-bold uppercase text-textMuted mb-2 block">Nickname Saat Ini</label>
                   <div className="flex items-center p-4 bg-secondary/30 rounded-2xl border border-border">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/80 to-accent flex items-center justify-center text-white text-xl font-bold shadow-inner mr-4">
-                      {pseudo.charAt(0).toUpperCase()}
-                    </div>
+                    <UserAvatar nickname={pseudo} className="w-12 h-12 text-xl mr-4" />
                     <div>
                       <div className="flex items-center">
                         <span className="font-bold text-lg text-text">{pseudo}</span>

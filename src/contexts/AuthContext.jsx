@@ -24,6 +24,7 @@ export function AuthProvider({ children }) {
   const timerRef = React.useRef(null);
 
   const [allRegisteredNicks, setAllRegisteredNicks] = useState([]);
+  const [registeredProfiles, setRegisteredProfiles] = useState({});
   const [permanentPin, setPermanentPin] = useState(null);
 
   useEffect(() => {
@@ -65,19 +66,36 @@ export function AuthProvider({ children }) {
       }
     });
 
-    // Fetch registered nicknames for blue checkmarks
+    // Fetch registered nicknames for blue checkmarks and avatars
     const fetchNicks = async () => {
-      const { data, error } = await supabase.from('registered_users').select('nickname');
+      const { data, error } = await supabase.from('registered_users').select('nickname, avatar_url');
       if (!error && data) {
         setAllRegisteredNicks(data.map(d => d.nickname));
+        const profilesMap = {};
+        data.forEach(d => {
+          profilesMap[d.nickname.toLowerCase()] = { avatar_url: d.avatar_url };
+        });
+        setRegisteredProfiles(profilesMap);
       }
     };
     fetchNicks();
 
     const channel = supabase.channel('registered_users_changes')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registered_users' }, (payload) => {
-        if (payload.new && payload.new.nickname) {
-          setAllRegisteredNicks(prev => [...prev, payload.new.nickname]);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'registered_users' }, (payload) => {
+        if (payload.eventType === 'INSERT' && payload.new && payload.new.nickname) {
+          setAllRegisteredNicks(prev => {
+            if (!prev.includes(payload.new.nickname)) return [...prev, payload.new.nickname];
+            return prev;
+          });
+          setRegisteredProfiles(prev => ({
+            ...prev,
+            [payload.new.nickname.toLowerCase()]: { avatar_url: payload.new.avatar_url }
+          }));
+        } else if (payload.eventType === 'UPDATE' && payload.new && payload.new.nickname) {
+          setRegisteredProfiles(prev => ({
+            ...prev,
+            [payload.new.nickname.toLowerCase()]: { avatar_url: payload.new.avatar_url }
+          }));
         }
       })
       .subscribe();
@@ -120,7 +138,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, pseudo, changePseudo, isRegistered, markAsRegistered, loading, allRegisteredNicks, permanentPin }}>
+    <AuthContext.Provider value={{ user, pseudo, changePseudo, isRegistered, markAsRegistered, loading, allRegisteredNicks, registeredProfiles, permanentPin }}>
       {!loading && children}
     </AuthContext.Provider>
   );
