@@ -132,7 +132,25 @@ export function AuthProvider({ children }) {
       })
       .subscribe();
 
+    const handleNewRequest = () => {
+      import('../services/dbServices').then(({ fetchPendingRequests }) => {
+        fetchPendingRequests(user.id).then(reqs => {
+          setPendingRequests(prev => {
+            if (reqs.length > prev.length) {
+              import('../utils/SoundManager').then(({ soundManager }) => {
+                soundManager.playReceivePM();
+              });
+            }
+            return reqs;
+          });
+        });
+      });
+    };
+
+    window.addEventListener('new_friend_request', handleNewRequest);
+
     return () => {
+      window.removeEventListener('new_friend_request', handleNewRequest);
       supabase.removeChannel(friendLinksChannel);
     };
   }, [user?.id, isRegistered, pseudo]);

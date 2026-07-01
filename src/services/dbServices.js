@@ -144,6 +144,28 @@ export const addFriendWithPin = async (userId, pin) => {
     return { success: false, message: "Error creating friend link" };
   }
 
+  // Fallback: Send a broadcast to global_notifications
+  const channel = supabase.channel('global_notifications');
+  // Check if channel is already subscribed (usually is via App.jsx)
+  if (channel.state === 'joined') {
+    channel.send({
+      type: 'broadcast',
+      event: 'friend_request',
+      payload: { targetUserId: pinData.user_id }
+    });
+  } else {
+    // If not joined, subscribe temporarily to send
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        channel.send({
+          type: 'broadcast',
+          event: 'friend_request',
+          payload: { targetUserId: pinData.user_id }
+        });
+      }
+    });
+  }
+
   // Optionally delete the pin so it can't be reused
   await supabase.from('temp_pins').delete().eq('pin_code', pin);
 

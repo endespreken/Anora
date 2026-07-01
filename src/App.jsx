@@ -354,6 +354,13 @@ function App() {
           }, 3000);
         }
       })
+      .on('broadcast', { event: 'friend_request' }, (payload) => {
+        // Fallback for realtime friend request notifications
+        if (payload.payload && payload.payload.targetUserId === user?.id) {
+          // Trigger AuthContext to re-fetch pending requests
+          window.dispatchEvent(new CustomEvent('new_friend_request'));
+        }
+      })
       .subscribe();
 
     globalChannelRef.current = globalChannel;
