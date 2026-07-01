@@ -365,7 +365,20 @@ function App() {
 
     globalChannelRef.current = globalChannel;
 
+    const handleSendFriendRequest = (e) => {
+      const targetUserId = e.detail?.targetUserId;
+      if (targetUserId && globalChannel) {
+        globalChannel.send({
+          type: 'broadcast',
+          event: 'friend_request',
+          payload: { targetUserId }
+        });
+      }
+    };
+    window.addEventListener('send_friend_request_broadcast', handleSendFriendRequest);
+
     return () => {
+      window.removeEventListener('send_friend_request_broadcast', handleSendFriendRequest);
       globalChannel.unsubscribe();
       globalChannelRef.current = null;
     };
