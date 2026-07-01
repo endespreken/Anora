@@ -114,28 +114,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!isRegistered || !pseudo || !user?.id) return;
 
-    const friendLinksChannel = supabase.channel(`friend_links_${user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_links' }, () => {
-        import('../services/dbServices').then(({ fetchPendingRequests }) => {
-          fetchPendingRequests(user.id).then(reqs => {
-            setPendingRequests(prev => {
-              // Play sound if a new request is received
-              if (reqs.length > prev.length) {
-                import('../utils/SoundManager').then(({ soundManager }) => {
-                  soundManager.playReceivePM();
-                });
-              }
-              return reqs;
-            });
-          });
-        });
-      })
-      .subscribe();
-
-    const handleNewRequest = () => {
+    const fetchAndSyncRequests = () => {
       import('../services/dbServices').then(({ fetchPendingRequests }) => {
         fetchPendingRequests(user.id).then(reqs => {
           setPendingRequests(prev => {
+            const isDifferent = reqs.length !== prev.length || !reqs.every((r, i) => prev[i] && r.id === prev[i].id);
+            if (!isDifferent) return prev;
+
             if (reqs.length > prev.length) {
               import('../utils/SoundManager').then(({ soundManager }) => {
                 soundManager.playReceivePM();
@@ -147,11 +132,19 @@ export function AuthProvider({ children }) {
       });
     };
 
-    window.addEventListener('new_friend_request', handleNewRequest);
+    const friendLinksChannel = supabase.channel(`friend_links_${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_links' }, fetchAndSyncRequests)
+      .subscribe();
+
+    window.addEventListener('new_friend_request', fetchAndSyncRequests);
+    
+    // Ultimate Fallback: Poll every 10 seconds
+    const intervalId = setInterval(fetchAndSyncRequests, 10000);
 
     return () => {
-      window.removeEventListener('new_friend_request', handleNewRequest);
+      window.removeEventListener('new_friend_request', fetchAndSyncRequests);
       supabase.removeChannel(friendLinksChannel);
+      clearInterval(intervalId);
     };
   }, [user?.id, isRegistered, pseudo]);
 
