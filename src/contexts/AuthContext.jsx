@@ -114,10 +114,20 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!isRegistered || !pseudo || !user?.id) return;
 
-    const friendLinksChannel = supabase.channel('friend_links_changes')
+    const friendLinksChannel = supabase.channel(`friend_links_${user.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_links' }, () => {
         import('../services/dbServices').then(({ fetchPendingRequests }) => {
-          fetchPendingRequests(user.id).then(reqs => setPendingRequests(reqs));
+          fetchPendingRequests(user.id).then(reqs => {
+            setPendingRequests(prev => {
+              // Play sound if a new request is received
+              if (reqs.length > prev.length) {
+                import('../utils/SoundManager').then(({ soundManager }) => {
+                  soundManager.playReceivePM();
+                });
+              }
+              return reqs;
+            });
+          });
         });
       })
       .subscribe();
