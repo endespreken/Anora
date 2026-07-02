@@ -104,6 +104,9 @@ export const addFriendWithPin = async (senderPin, targetPin) => {
   }
   const trueUserId = senderData.user_id;
 
+  let targetUserId = null;
+  let isTempPin = false;
+
   // Check permanent pin for target
   const { data: permData, error: permError } = await supabase
     .from('registered_users')
@@ -112,63 +115,65 @@ export const addFriendWithPin = async (senderPin, targetPin) => {
     .maybeSingle();
 
   if (!permError && permData && permData.user_id) {
-    if (permData.user_id === trueUserId) {
-      return { success: false, message: "You cannot add yourself" };
-    }
-    
-    // Create friend link
-    const { error: linkError } = await supabase
-      .from('friend_links')
-      .insert([
-        { user_a_id: trueUserId, user_b_id: permData.user_id, status: 'pending' }
-      ]);
+    targetUserId = permData.user_id;
+  } else {
+    // Find the temp pin
+    const { data: pinData, error: pinError } = await supabase
+      .from('temp_pins')
+      .select('*')
+      .eq('pin_code', targetPin)
+      .gte('expires_at', new Date().toISOString())
+      .single();
 
-    if (linkError) {
-      console.error("Error creating friend link", linkError);
-      return { success: false, message: "Error creating friend link or request already sent" };
+    if (pinError || !pinData) {
+      console.error("Invalid or expired PIN", pinError);
+      return { success: false, message: "PIN tidak valid atau sudah kadaluarsa" };
     }
-
-    return { success: true, message: "Permintaan pertemanan berhasil dikirim" };
+    targetUserId = pinData.user_id;
+    isTempPin = true;
   }
 
-  // Find the temp pin
-  const { data: pinData, error: pinError } = await supabase
-    .from('temp_pins')
-    .select('*')
-    .eq('pin_code', targetPin)
-    .gte('expires_at', new Date().toISOString())
-    .single();
-
-  if (pinError || !pinData) {
-    console.error("Invalid or expired PIN", pinError);
-    return { success: false, message: "Invalid or expired PIN" };
+  if (targetUserId === trueUserId) {
+    return { success: false, message: "Kamu tidak bisa menambahkan dirimu sendiri" };
   }
 
-  if (pinData.user_id === trueUserId) {
-    return { success: false, message: "You cannot add yourself" };
+  // Check if they are already friends or have a pending request
+  const { data: existingLink } = await supabase
+    .from('friend_links')
+    .select('status')
+    .or(`and(user_a_id.eq.${trueUserId},user_b_id.eq.${targetUserId}),and(user_a_id.eq.${targetUserId},user_b_id.eq.${trueUserId})`)
+    .maybeSingle();
+
+  if (existingLink) {
+    if (existingLink.status === 'accepted') {
+      return { success: false, message: "Kalian sudah berteman." };
+    }
+    return { success: false, message: "Permintaan pertemanan sudah pernah dikirim." };
   }
 
   // Create friend link
   const { error: linkError } = await supabase
     .from('friend_links')
     .insert([
-      { user_a_id: trueUserId, user_b_id: pinData.user_id, status: 'pending' }
+      { user_a_id: trueUserId, user_b_id: targetUserId, status: 'pending' }
     ]);
 
   if (linkError) {
     console.error("Error creating friend link", linkError);
-    return { success: false, message: "Error creating friend link" };
+    return { success: false, message: "Gagal mengirim permintaan pertemanan" };
   }
 
-  // Fallback: Notify App.jsx to broadcast the event
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('send_friend_request_broadcast', {
-      detail: { targetUserId: pinData.user_id }
-    }));
-  }
+  if (isTempPin) {
+    // Fallback: Notify App.jsx to broadcast the event
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('send_friend_request_broadcast', {
+        detail: { targetUserId: targetUserId }
+      }));
+    }
 
-  // Optionally delete the temp pin so it can't be reused
-  await supabase.from('temp_pins').delete().eq('pin_code', targetPin);
+    // Optionally delete the temp pin so it can't be reused
+    await supabase.from('temp_pins').delete().eq('pin_code', targetPin);
+  }
 
   return { success: true, message: "Permintaan pertemanan berhasil dikirim" };
 };
