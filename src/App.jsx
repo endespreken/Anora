@@ -582,16 +582,15 @@ function App() {
   }
 
   const handleSubmitFollowPin = async (pin) => {
-    if (!user) return false;
+    if (!user) return { success: false, message: "User not found" };
     const result = await addFriendWithPin(user.id, pin);
     if (result.success) {
       const friendIds = await fetchFriends(user.id);
       setFriends(friendIds);
       const nicks = await fetchFriendNicks(user.id);
       setFriendNicks(nicks);
-      return true;
     }
-    return false;
+    return result;
   };
 
   const handleConfirmUnfollow = async () => {

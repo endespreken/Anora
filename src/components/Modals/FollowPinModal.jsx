@@ -18,12 +18,12 @@ export default function FollowPinModal({ isOpen, onClose, targetUserNick, onSubm
     setLoading(true);
     setError('');
     
-    const success = await onSubmitPin(pin.trim());
-    if (success) {
+    const result = await onSubmitPin(pin.trim());
+    if (result && result.success) {
       setPin('');
       onClose();
     } else {
-      setError('PIN tidak valid atau pengguna salah.');
+      setError(result?.message || 'PIN tidak valid atau pengguna salah.');
     }
     setLoading(false);
   };

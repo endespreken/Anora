@@ -126,6 +126,10 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
         return true;
 
       case 'addfriend':
+        if (!isRegistered) {
+          addLocalMessage("Kamu harus registrasi akun terlebih dahulu untuk menambah teman. Gunakan: /register [nickname] [password] [email]");
+          return true;
+        }
         if (args) {
           // If a pin is provided
           const result = await addFriendWithPin(user.id, args);

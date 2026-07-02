@@ -88,6 +88,17 @@ export const generatePin = async (userId) => {
 };
 
 export const addFriendWithPin = async (userId, pin) => {
+  // Check if the sender is registered
+  const { data: senderData, error: senderError } = await supabase
+    .from('registered_users')
+    .select('nickname')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (senderError || !senderData) {
+    return { success: false, message: "Kamu harus registrasi akun terlebih dahulu untuk menambah teman." };
+  }
+
   // Check permanent pin first
   const { data: permData, error: permError } = await supabase
     .from('registered_users')
@@ -240,13 +251,14 @@ export const fetchPendingRequests = async (userId) => {
     
   return data.map(link => {
     const sender = usersData?.find(u => u.user_id === link.user_a_id);
+    if (!sender) return null; // Ignore if sender is not registered
     return {
       id: link.id,
       sender_id: link.user_a_id,
-      sender_nickname: sender ? sender.nickname : 'Unknown User',
+      sender_nickname: sender.nickname,
       created_at: link.created_at
     };
-  });
+  }).filter(Boolean);
 };
 
 export const acceptFriendRequest = async (linkId) => {
