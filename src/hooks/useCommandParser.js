@@ -2,7 +2,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { sendMessage, addFriendWithPin, checkNicknameExists, checkEmailExists, registerNickname, verifyNickname } from '../services/dbServices';
 
 export function useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage, joinedSpaces = [], privateChannels = []) {
-  const { user, pseudo, changePseudo, isRegistered, markAsRegistered } = useAuth();
+  const { user, pseudo, changePseudo, isRegistered, markAsRegistered, permanentPin } = useAuth();
 
   const parseCommand = async (text, replyToId = null) => {
     const trimmed = text.trim();
@@ -132,7 +132,7 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
         }
         if (args) {
           // If a pin is provided
-          const result = await addFriendWithPin(user.id, args, pseudo);
+          const result = await addFriendWithPin(permanentPin, args);
           alert(result.message); // In a real app, use a toast notification
         } else {
           // Open PIN generator modal

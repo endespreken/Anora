@@ -43,7 +43,7 @@ function App() {
   const [activeMobileTab, setActiveMobileTab] = useState('pms');
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState({});
-  const { user, pseudo, isRegistered } = useAuth();
+  const { user, pseudo, isRegistered, trueUserId, permanentPin } = useAuth();
   const [hasJoined, setHasJoined] = useState(() => {
     if (pseudo && !/^Anon\d+$/.test(pseudo)) {
       return true;
@@ -68,30 +68,29 @@ function App() {
   const { friendsOnlyPM } = useSettings();
 
   useEffect(() => {
-    if (user) {
-      if (isRegistered && pseudo) {
-        const loadFriends = async () => {
-          const friendIds = await fetchFriends(user.id);
-          setFriends(friendIds);
-          const nicks = await fetchFriendNicks(user.id);
-          setFriendNicks(nicks);
-          
-          if (nicks.length > 0) {
-            setPrivateChannels(prev => {
-              const newPMs = nicks.map(n => `@${[pseudo, n].sort().join('-')}`);
-              const merged = [...new Set([...prev, ...newPMs])];
-              localStorage.setItem(`anora_pm_${pseudo}`, JSON.stringify(merged));
-              return merged;
-            });
-          }
-        };
-        loadFriends();
-      } else {
-        setFriends([]);
-        setFriendNicks([]);
-      }
+    const activeUserId = trueUserId || user?.id;
+    if (activeUserId && isRegistered && pseudo) {
+      const loadFriends = async () => {
+        const friendIds = await fetchFriends(activeUserId);
+        setFriends(friendIds);
+        const nicks = await fetchFriendNicks(activeUserId);
+        setFriendNicks(nicks);
+        
+        if (nicks.length > 0) {
+          setPrivateChannels(prev => {
+            const newPMs = nicks.map(n => `@${[pseudo, n].sort().join('-')}`);
+            const merged = [...new Set([...prev, ...newPMs])];
+            localStorage.setItem(`anora_pm_${pseudo}`, JSON.stringify(merged));
+            return merged;
+          });
+        }
+      };
+      loadFriends();
+    } else {
+      setFriends([]);
+      setFriendNicks([]);
     }
-  }, [user, isRegistered, pseudo]);
+  }, [user, isRegistered, pseudo, trueUserId]);
   
   // Load channels when pseudo changes
   useEffect(() => {
@@ -582,19 +581,21 @@ function App() {
   }
 
   const handleSubmitFollowPin = async (pin) => {
-    if (!user) return { success: false, message: "User not found" };
-    const result = await addFriendWithPin(user.id, pin, pseudo);
+    if (!isRegistered || !permanentPin) return { success: false, message: "Kamu harus registrasi akun terlebih dahulu untuk menambah teman." };
+    const result = await addFriendWithPin(permanentPin, pin);
     if (result.success) {
-      const friendIds = await fetchFriends(user.id);
+      const activeUserId = trueUserId || user?.id;
+      const friendIds = await fetchFriends(activeUserId);
       setFriends(friendIds);
-      const nicks = await fetchFriendNicks(user.id);
+      const nicks = await fetchFriendNicks(activeUserId);
       setFriendNicks(nicks);
     }
     return result;
   };
 
   const handleConfirmUnfollow = async () => {
-    if (!user) return;
+    const activeUserId = trueUserId || user?.id;
+    if (!activeUserId) return;
     
     if (unfollowTargetIsSpace) {
       const channelName = targetFollowUser;
@@ -607,11 +608,11 @@ function App() {
         setFollowedChannels(prev => [...prev, channelName]);
       }
     } else {
-      const success = await removeFriend(user.id, targetFollowUser);
+      const success = await removeFriend(activeUserId, targetFollowUser);
       if (success) {
-        const friendIds = await fetchFriends(user.id);
+        const friendIds = await fetchFriends(activeUserId);
         setFriends(friendIds);
-        const nicks = await fetchFriendNicks(user.id);
+        const nicks = await fetchFriendNicks(activeUserId);
         setFriendNicks(nicks);
       }
     }

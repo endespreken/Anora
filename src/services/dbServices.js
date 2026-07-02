@@ -87,31 +87,32 @@ export const generatePin = async (userId) => {
   return data.pin_code;
 };
 
-export const addFriendWithPin = async (userId, pin, pseudo) => {
-  // Check if the sender is registered and session is valid
-  const { data: senderData, error: senderError } = await supabase
-    .from('registered_users')
-    .select('nickname, user_id')
-    .ilike('nickname', pseudo || '')
-    .maybeSingle();
-
-  if (senderError || !senderData) {
+export const addFriendWithPin = async (senderPin, targetPin) => {
+  if (!senderPin) {
     return { success: false, message: "Kamu harus registrasi akun terlebih dahulu untuk menambah teman." };
   }
 
-  if (senderData.user_id !== userId) {
-    return { success: false, message: `Sesi login kamu tidak sinkron. Silakan ketik: /nick ${pseudo} [password] untuk login ulang.` };
-  }
+  // Get sender's true user_id
+  const { data: senderData, error: senderError } = await supabase
+    .from('registered_users')
+    .select('user_id')
+    .eq('pin_code', senderPin)
+    .maybeSingle();
 
-  // Check permanent pin first
+  if (senderError || !senderData) {
+    return { success: false, message: "Profil pengirim tidak ditemukan di database." };
+  }
+  const trueUserId = senderData.user_id;
+
+  // Check permanent pin for target
   const { data: permData, error: permError } = await supabase
     .from('registered_users')
     .select('user_id')
-    .eq('pin_code', pin)
+    .eq('pin_code', targetPin)
     .maybeSingle();
 
   if (!permError && permData && permData.user_id) {
-    if (permData.user_id === userId) {
+    if (permData.user_id === trueUserId) {
       return { success: false, message: "You cannot add yourself" };
     }
     
@@ -119,7 +120,7 @@ export const addFriendWithPin = async (userId, pin, pseudo) => {
     const { error: linkError } = await supabase
       .from('friend_links')
       .insert([
-        { user_a_id: userId, user_b_id: permData.user_id, status: 'pending' }
+        { user_a_id: trueUserId, user_b_id: permData.user_id, status: 'pending' }
       ]);
 
     if (linkError) {
@@ -134,7 +135,7 @@ export const addFriendWithPin = async (userId, pin, pseudo) => {
   const { data: pinData, error: pinError } = await supabase
     .from('temp_pins')
     .select('*')
-    .eq('pin_code', pin)
+    .eq('pin_code', targetPin)
     .gte('expires_at', new Date().toISOString())
     .single();
 
@@ -143,7 +144,7 @@ export const addFriendWithPin = async (userId, pin, pseudo) => {
     return { success: false, message: "Invalid or expired PIN" };
   }
 
-  if (pinData.user_id === userId) {
+  if (pinData.user_id === trueUserId) {
     return { success: false, message: "You cannot add yourself" };
   }
 
@@ -151,7 +152,7 @@ export const addFriendWithPin = async (userId, pin, pseudo) => {
   const { error: linkError } = await supabase
     .from('friend_links')
     .insert([
-      { user_a_id: userId, user_b_id: pinData.user_id, status: 'pending' }
+      { user_a_id: trueUserId, user_b_id: pinData.user_id, status: 'pending' }
     ]);
 
   if (linkError) {
@@ -166,8 +167,8 @@ export const addFriendWithPin = async (userId, pin, pseudo) => {
     }));
   }
 
-  // Optionally delete the pin so it can't be reused
-  await supabase.from('temp_pins').delete().eq('pin_code', pin);
+  // Optionally delete the temp pin so it can't be reused
+  await supabase.from('temp_pins').delete().eq('pin_code', targetPin);
 
   return { success: true, message: "Permintaan pertemanan berhasil dikirim" };
 };

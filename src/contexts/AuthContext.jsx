@@ -27,20 +27,26 @@ export function AuthProvider({ children }) {
   const [registeredProfiles, setRegisteredProfiles] = useState({});
   const [permanentPin, setPermanentPin] = useState(null);
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [trueUserId, setTrueUserId] = useState(null);
 
   useEffect(() => {
     if (isRegistered && pseudo) {
-      import('../services/dbServices').then(({ fetchUserPin, fetchPendingRequests }) => {
+      import('../services/dbServices').then(({ fetchUserPin, fetchUserProfile }) => {
         fetchUserPin(pseudo).then(pin => {
           setPermanentPin(pin);
         });
-        fetchPendingRequests(user?.id || '').then(reqs => setPendingRequests(reqs));
+        fetchUserProfile(pseudo).then(profile => {
+          if (profile && profile.user_id) {
+            setTrueUserId(profile.user_id);
+          }
+        });
       });
     } else {
       setPermanentPin(null);
       setPendingRequests([]);
+      setTrueUserId(null);
     }
-  }, [isRegistered, pseudo, user]);
+  }, [isRegistered, pseudo]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -112,11 +118,12 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (!isRegistered || !pseudo || !user?.id) return;
+    const activeUserId = trueUserId || user?.id;
+    if (!isRegistered || !pseudo || !activeUserId) return;
 
     const fetchAndSyncRequests = () => {
       import('../services/dbServices').then(({ fetchPendingRequests }) => {
-        fetchPendingRequests(user.id).then(reqs => {
+        fetchPendingRequests(activeUserId).then(reqs => {
           setPendingRequests(prev => {
             const isDifferent = reqs.length !== prev.length || !reqs.every((r, i) => prev[i] && r.id === prev[i].id);
             if (!isDifferent) return prev;
@@ -132,7 +139,7 @@ export function AuthProvider({ children }) {
       });
     };
 
-    const friendLinksChannel = supabase.channel(`friend_links_${user.id}`)
+    const friendLinksChannel = supabase.channel(`friend_links_${activeUserId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_links' }, fetchAndSyncRequests)
       .subscribe();
 
@@ -146,7 +153,7 @@ export function AuthProvider({ children }) {
       supabase.removeChannel(friendLinksChannel);
       clearInterval(intervalId);
     };
-  }, [user?.id, isRegistered, pseudo]);
+  }, [user?.id, trueUserId, isRegistered, pseudo]);
 
   const changePseudo = (newPseudo, registered = false) => {
     const oldPseudo = pseudo;
@@ -178,7 +185,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, pseudo, changePseudo, isRegistered, markAsRegistered, loading, allRegisteredNicks, registeredProfiles, permanentPin, pendingRequests, setPendingRequests }}>
+    <AuthContext.Provider value={{ user, trueUserId, pseudo, changePseudo, isRegistered, markAsRegistered, loading, allRegisteredNicks, registeredProfiles, permanentPin, pendingRequests, setPendingRequests }}>
       {!loading && children}
     </AuthContext.Provider>
   );
