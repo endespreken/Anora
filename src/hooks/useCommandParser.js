@@ -132,7 +132,7 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
         }
         if (args) {
           // If a pin is provided
-          const result = await addFriendWithPin(user.id, args);
+          const result = await addFriendWithPin(user.id, args, pseudo);
           alert(result.message); // In a real app, use a toast notification
         } else {
           // Open PIN generator modal

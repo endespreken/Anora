@@ -87,16 +87,20 @@ export const generatePin = async (userId) => {
   return data.pin_code;
 };
 
-export const addFriendWithPin = async (userId, pin) => {
-  // Check if the sender is registered
+export const addFriendWithPin = async (userId, pin, pseudo) => {
+  // Check if the sender is registered and session is valid
   const { data: senderData, error: senderError } = await supabase
     .from('registered_users')
-    .select('nickname')
-    .eq('user_id', userId)
+    .select('nickname, user_id')
+    .ilike('nickname', pseudo || '')
     .maybeSingle();
 
   if (senderError || !senderData) {
     return { success: false, message: "Kamu harus registrasi akun terlebih dahulu untuk menambah teman." };
+  }
+
+  if (senderData.user_id !== userId) {
+    return { success: false, message: `Sesi login kamu tidak sinkron. Silakan ketik: /nick ${pseudo} [password] untuk login ulang.` };
   }
 
   // Check permanent pin first
