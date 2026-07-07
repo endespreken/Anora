@@ -829,13 +829,13 @@ export const setUserVerified = async (nickname, isVerified) => {
 };
 
 export const checkIfUserVerified = async (nickname) => {
-  if (!nickname) return false;
+  if (!nickname) return { isRegistered: false, isVerified: false };
   const { data, error } = await supabase
     .from('registered_users')
     .select('is_verified')
     .ilike('nickname', nickname)
     .maybeSingle();
     
-  if (error || !data) return false;
-  return data.is_verified || false;
+  if (error || !data) return { isRegistered: false, isVerified: false };
+  return { isRegistered: true, isVerified: data.is_verified || false };
 };

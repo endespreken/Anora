@@ -104,8 +104,15 @@ export default function FOPortalModal({ isOpen, onClose, onVerifiedUpdated }) {
   const handleCheckUserVerified = async () => {
     if (!targetUserNickname.trim()) return;
     setLoading(true);
-    const isV = await checkIfUserVerified(targetUserNickname.trim());
-    setIsUserVerifiedStatus(isV);
+    const result = await checkIfUserVerified(targetUserNickname.trim());
+    
+    if (!result.isRegistered) {
+      showMessage(`User ${targetUserNickname} tidak terdaftar!`, 'error');
+      setIsUserVerifiedStatus(false);
+    } else {
+      setIsUserVerifiedStatus(result.isVerified);
+      showMessage(`User ${targetUserNickname} terdaftar. Status verified: ${result.isVerified ? 'Ya' : 'Tidak'}`, 'success');
+    }
     setLoading(false);
   };
 
@@ -122,6 +129,14 @@ export default function FOPortalModal({ isOpen, onClose, onVerifiedUpdated }) {
     }
 
     setLoading(true);
+    // Double check registration
+    const result = await checkIfUserVerified(targetUserNickname.trim());
+    if (!result.isRegistered) {
+      showMessage(`User ${targetUserNickname} tidak terdaftar!`, 'error');
+      setLoading(false);
+      return;
+    }
+
     const success = await setUserVerified(targetUserNickname.trim(), isUserVerifiedStatus);
     setLoading(false);
 

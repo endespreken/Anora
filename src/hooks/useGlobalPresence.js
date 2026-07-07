@@ -37,13 +37,18 @@ export function useGlobalPresence(user, pseudo, joinedSpaces, privateChannels) {
             });
           };
 
+          // Track presence immediately so user shows as online without waiting for geolocation prompt
+          trackPresence();
+
           if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
               (position) => trackPresence(position.coords.latitude, position.coords.longitude),
-              () => trackPresence()
+              (error) => {
+                 console.log('Geolocation error or denied, fallback to null location', error);
+                 // Already tracked without location, no need to re-track unless we want to log
+              },
+              { timeout: 10000 } // Don't hang indefinitely
             );
-          } else {
-             trackPresence();
           }
         }
       });

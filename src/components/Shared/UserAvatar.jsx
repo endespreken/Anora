@@ -33,20 +33,24 @@ export default function UserAvatar({ nickname, className = "w-10 h-10 text-lg", 
           className="w-full h-full object-cover bg-surface"
           onError={(e) => { 
             e.target.onerror = null; 
-            e.target.src = `https://ui-avatars.com/api/?name=${nickname}&background=random`; 
+            e.target.src = `https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(nickname)}`; 
           }} 
         />
       </div>
     );
   }
 
-  // Fallback (Belum upload avatar)
+  // Fallback (Belum upload avatar) - Menggunakan DiceBear
   return (
     <div 
-      className={`rounded-full bg-secondary flex items-center justify-center font-bold text-text border border-white/20 flex-shrink-0 ${className}`}
+      className={`rounded-full overflow-hidden bg-secondary border border-white/20 flex-shrink-0 flex items-center justify-center ${className}`}
       style={style}
     >
-      {initial}
+      <img 
+        src={`https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(nickname)}`} 
+        alt={nickname} 
+        className="w-full h-full object-cover bg-surface"
+      />
     </div>
   );
 }

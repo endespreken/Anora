@@ -3,6 +3,7 @@ import { Radio, Check, CheckCheck, Reply as ReplyIcon, SmilePlus, BadgeCheck } f
 import emoji from 'react-easy-emoji';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
+import LinkPreview from './LinkPreview';
 
 export default function MessageBubble({ message, isOwn, onReply, onReact, allMessages = [], onUserClick, onProfileClick, isTargetOnline }) {
   const [showMobileReact, setShowMobileReact] = useState(false);
@@ -40,22 +41,55 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
     return matches.some(match => match.substring(1).toLowerCase() === pseudo.toLowerCase());
   })();
 
+  const extractUrls = (text) => {
+    if (!text) return [];
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.match(urlRegex) || [];
+  };
+
+  const urlsInMessage = extractUrls(content);
+  const firstUrl = urlsInMessage.length > 0 ? urlsInMessage[0] : null;
+
   const renderMessageContent = (text) => {
     if (!text) return null;
-    const parts = text.split(/(@[a-zA-Z0-9_]+)/g);
+    
+    // Split text by URL
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
     
     return parts.map((part, i) => {
-      if (part.startsWith('@') && part.length > 1) {
-        const mentionedNick = part.substring(1);
-        const isMe = pseudo && mentionedNick.toLowerCase() === pseudo.toLowerCase();
-        
+      // If the part is a URL
+      if (part.match(urlRegex)) {
         return (
-          <span key={i} className={`font-semibold rounded-sm px-1.5 py-0.5 mx-0.5 ${isMe ? (isOwn ? 'bg-white/20 text-white' : 'bg-yellow-500/40 text-yellow-800 dark:text-yellow-300') : (isOwn ? 'text-white/90 bg-white/10' : 'text-primary bg-primary/10')}`}>
-            {emoji(part)}
-          </span>
+          <a 
+            key={i} 
+            href={part} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-blue-400 hover:text-blue-300 underline break-all"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {part}
+          </a>
         );
       }
-      return <React.Fragment key={i}>{emoji(part)}</React.Fragment>;
+      
+      // If not URL, split by mentions
+      const mentionParts = part.split(/(@[a-zA-Z0-9_]+)/g);
+      
+      return mentionParts.map((mPart, j) => {
+        if (mPart.startsWith('@') && mPart.length > 1) {
+          const mentionedNick = mPart.substring(1);
+          const isMe = pseudo && mentionedNick.toLowerCase() === pseudo.toLowerCase();
+          
+          return (
+            <span key={`${i}-${j}`} className={`font-semibold rounded-sm px-1.5 py-0.5 mx-0.5 ${isMe ? (isOwn ? 'bg-white/20 text-white' : 'bg-yellow-500/40 text-yellow-800 dark:text-yellow-300') : (isOwn ? 'text-white/90 bg-white/10' : 'text-primary bg-primary/10')}`}>
+              {emoji(mPart)}
+            </span>
+          );
+        }
+        return <React.Fragment key={`${i}-${j}`}>{emoji(mPart)}</React.Fragment>;
+      });
     });
   };
 
@@ -229,11 +263,18 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
             )}
             
             <div className="relative z-10 flex flex-col">
-              <div className="flex items-start pr-4">
-                {isBeacon && <Radio size={16} className="text-accent mr-2 mt-0.5 shrink-0" />}
-                <span className={`leading-relaxed whitespace-pre-wrap break-words ${isBeacon ? 'font-medium' : ''}`}>
-                  {isBeacon ? renderMessageContent(content.replace('[BEACON SIGNAL]:', '').trim()) : renderMessageContent(content)}
-                </span>
+              <div className="flex flex-col pr-4">
+                <div className="flex items-start">
+                  {isBeacon && <Radio size={16} className="text-accent mr-2 mt-0.5 shrink-0" />}
+                  <span className={`leading-relaxed whitespace-pre-wrap break-words ${isBeacon ? 'font-medium' : ''}`}>
+                    {isBeacon ? renderMessageContent(content.replace('[BEACON SIGNAL]:', '').trim()) : renderMessageContent(content)}
+                  </span>
+                </div>
+                {firstUrl && (
+                  <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+                    <LinkPreview url={firstUrl} />
+                  </div>
+                )}
               </div>
               
               <div className={`flex items-center justify-end mt-1 -mb-1 space-x-1 text-[10px] ${isOwn ? 'text-white/70' : 'text-textMuted'}`}>
