@@ -30,6 +30,8 @@ import Home from './components/Home/Home';
 import { App as CapApp } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
+import { Dialog } from '@capacitor/dialog';
+import NativeAlert from './components/Modals/NativeAlert';
 
 function App() {
   const [currentChannel, setCurrentChannel] = useState('random');
@@ -44,6 +46,7 @@ function App() {
   const [isChangeNicknameModalOpen, setIsChangeNicknameModalOpen] = useState(false);
   const [isJoinChannelModalOpen, setIsJoinChannelModalOpen] = useState(false);
   const [isFOPortalOpen, setIsFOPortalOpen] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ isOpen: false, message: '' });
   const [verifiedChannels, setVerifiedChannels] = useState([]);
   
   const [pendingVibeReply, setPendingVibeReply] = useState(null);
@@ -76,6 +79,19 @@ function App() {
   const { friendsOnlyPM } = useSettings();
 
   useEffect(() => {
+    // Override default alert
+    window.alert = (message) => {
+      if (Capacitor.isNativePlatform()) {
+        Dialog.alert({
+          title: 'Anora',
+          message: String(message),
+          buttonTitle: 'Mengerti'
+        });
+      } else {
+        setAlertConfig({ isOpen: true, message: String(message) });
+      }
+    };
+
     const initNotifications = async () => {
       try {
         await LocalNotifications.requestPermissions();
@@ -207,7 +223,7 @@ function App() {
     });
   };
   
-  const { messages, typingUsers, loading, setMessages, broadcastTyping } = useChatRealtime(currentChannel, user, pseudo);
+  const { messages, typingUsers, loading, setMessages, broadcastTyping, hasMore, loadMoreMessages, isLoadingMore } = useChatRealtime(currentChannel, user, pseudo);
 
   // Global Presence
   const { globalOnlineUsers, locationPermissionDenied, handleRequestLocation } = useGlobalPresence(user, pseudo, joinedSpaces, privateChannels);
@@ -813,6 +829,10 @@ function App() {
           onUserClick={startPrivateMessage}
           onProfileClick={openProfileModal}
           isTargetOnline={currentChannel.startsWith('@') && onlineUsers.some(u => u.pseudo !== pseudo)}
+          hasMore={hasMore}
+          onLoadMore={loadMoreMessages}
+          isLoadingMore={isLoadingMore}
+          currentChannel={currentChannel}
         />
         
         <div className="sticky bottom-0 w-full z-10">
@@ -906,6 +926,12 @@ function App() {
       <LocationRequiredModal
         isOpen={locationPermissionDenied}
         onRequestPermission={handleRequestLocation}
+      />
+
+      <NativeAlert 
+        isOpen={alertConfig.isOpen} 
+        message={alertConfig.message} 
+        onClose={() => setAlertConfig({ isOpen: false, message: '' })} 
       />
     </div>
   );

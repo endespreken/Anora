@@ -4,13 +4,24 @@ import { useAuth } from '../../contexts/AuthContext';
 import { MessageSquareDashed } from 'lucide-react';
 import { addReaction } from '../../services/dbServices';
 
-export default function ChatWindow({ messages, loading, typingUsers = [], onReply, onUserClick, onProfileClick, isTargetOnline }) {
+export default function ChatWindow({ messages, loading, typingUsers = [], onReply, onUserClick, onProfileClick, isTargetOnline, hasMore, onLoadMore, isLoadingMore, currentChannel }) {
   const { pseudo } = useAuth();
   const bottomRef = useRef(null);
 
+  const isFirstLoadRef = useRef(true);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, typingUsers]);
+    isFirstLoadRef.current = true;
+  }, [currentChannel]);
+
+  useEffect(() => {
+    if (!isLoadingMore && bottomRef.current) {
+      bottomRef.current.scrollIntoView({ 
+        behavior: isFirstLoadRef.current ? 'auto' : 'smooth' 
+      });
+      isFirstLoadRef.current = false;
+    }
+  }, [messages, typingUsers, isLoadingMore]);
 
   if (loading) {
     return (
@@ -35,6 +46,20 @@ export default function ChatWindow({ messages, loading, typingUsers = [], onRepl
         </div>
       ) : (
         <div className="space-y-4 max-w-5xl mx-auto">
+          {hasMore && (
+            <div className="flex justify-center my-4">
+              <button 
+                onClick={onLoadMore}
+                disabled={isLoadingMore}
+                className="bg-secondary hover:bg-secondary/80 text-textMuted text-xs font-semibold py-2 px-6 rounded-full border border-border shadow-sm transition-all flex items-center space-x-2"
+              >
+                {isLoadingMore ? (
+                  <div className="w-4 h-4 border-2 border-textMuted border-t-transparent rounded-full animate-spin"></div>
+                ) : null}
+                <span>{isLoadingMore ? 'Memuat...' : 'Tampilkan Pesan Lama'}</span>
+              </button>
+            </div>
+          )}
           {messages.map((msg) => (
             <MessageBubble 
               key={msg.id || msg.created_at + Math.random()} 

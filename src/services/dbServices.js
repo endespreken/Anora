@@ -42,6 +42,29 @@ export const fetchMessages = async (channel, limit = 50) => {
   return decryptedData.reverse();
 };
 
+export const fetchOldMessages = async (channel, beforeTimestamp, limit = 50) => {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('channel_name', channel)
+    .lt('created_at', beforeTimestamp)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+    
+  if (error) {
+    console.error("Error fetching old messages:", error);
+    return [];
+  }
+  
+  // Decrypt messages
+  const decryptedData = data.map(msg => ({
+    ...msg,
+    content: decryptMessage(msg.content, channel)
+  }));
+  
+  return decryptedData.reverse();
+};
+
 export const fetchUnreadCountsForUser = async (channels, pseudo) => {
   const counts = {};
   if (!channels || channels.length === 0) return counts;

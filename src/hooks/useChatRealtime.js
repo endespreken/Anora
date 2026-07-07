@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../config/supabaseClient';
-import { fetchMessages } from '../services/dbServices';
+import { fetchMessages, fetchOldMessages } from '../services/dbServices';
 import { decryptMessage } from '../utils/encryption';
 
 export function useChatRealtime(channel, user, pseudo) {
   const [messages, setMessages] = useState([]);
   const [typingUsers, setTypingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
     if (!channel) return;
@@ -49,6 +51,9 @@ export function useChatRealtime(channel, user, pseudo) {
         } else {
           setMessages([...data]);
         }
+        
+        // Check if we fetched a full page (50 messages)
+        setHasMore(data.length === 50);
         
         setLoading(false);
       }
@@ -100,8 +105,9 @@ export function useChatRealtime(channel, user, pseudo) {
 
     return () => {
       mounted = false;
-      messageChannel.unsubscribe();
-      presenceChannel.unsubscribe();
+      supabase.removeChannel(messageChannel);
+      supabase.removeChannel(presenceChannel);
+      mounted = false;
     };
   }, [channel, user, pseudo]);
 

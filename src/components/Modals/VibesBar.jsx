@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus } from 'lucide-react';
+import { Plus, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import VibeViewerModal from './VibeViewerModal';
 import VibeUploadModal from './VibeUploadModal';
@@ -13,12 +13,33 @@ export default function VibesBar({ friendNicks, onReply }) {
   const [selectedVibeIndex, setSelectedVibeIndex] = useState(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+  const scrollRef = React.useRef(null);
 
   useEffect(() => {
     loadVibes();
     const interval = setInterval(loadVibes, 30000); // refresh every 30 seconds
     return () => clearInterval(interval);
   }, [pseudo, friendNicks]);
+
+  const checkScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setShowRightArrow(scrollLeft + clientWidth < scrollWidth - 5);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [vibesList]);
+
+  const scrollRight = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+  };
 
   const loadVibes = async () => {
     if (!pseudo) return;
@@ -34,6 +55,15 @@ export default function VibesBar({ friendNicks, onReply }) {
       if (v.vibes_visibility === 'friends_only' && isFriend) return true;
       
       return false;
+    });
+
+    // Urutkan vibes (prioritaskan teman)
+    filtered.sort((a, b) => {
+      const aIsFriend = friendNicks.some(fn => fn.toLowerCase() === a.nickname.toLowerCase());
+      const bIsFriend = friendNicks.some(fn => fn.toLowerCase() === b.nickname.toLowerCase());
+      if (aIsFriend && !bIsFriend) return -1;
+      if (!aIsFriend && bIsFriend) return 1;
+      return 0;
     });
 
     // Move current user to the front if they have vibes
@@ -57,9 +87,13 @@ export default function VibesBar({ friendNicks, onReply }) {
   if (!isRegistered && vibesList.length === 0) return null;
 
   return (
-    <>
-      <div className="w-full border-b border-border bg-secondary/10 px-4 py-3 overflow-x-auto no-scrollbar">
-        <div className="flex space-x-4 items-center">
+    <div className="relative">
+      <div 
+        ref={scrollRef}
+        onScroll={checkScroll}
+        className="w-full border-b border-border bg-secondary/10 px-4 py-3 overflow-x-auto no-scrollbar scroll-smooth"
+      >
+        <div className="flex space-x-4 items-center w-max pr-8">
           
           {/* Add Vibe Button / My Vibe (Only for registered) */}
           {isRegistered && (
@@ -119,6 +153,24 @@ export default function VibesBar({ friendNicks, onReply }) {
         </div>
       </div>
 
+      {showRightArrow && (
+        <button 
+          onClick={scrollRight}
+          className="absolute right-0 top-1/2 -translate-y-1/2 bg-surface/80 backdrop-blur-md p-1.5 shadow-lg border border-border text-text hover:text-primary transition-colors flex items-center justify-center z-10 hidden sm:flex h-[70%]"
+        >
+          <ChevronRight size={20} />
+        </button>
+      )}
+
+      {showRightArrow && (
+        <button 
+          onClick={scrollRight}
+          className="absolute right-2 top-1/2 -translate-y-1/2 bg-surface/90 backdrop-blur-md p-1 rounded-full shadow-lg border border-border text-text active:scale-95 transition-all flex items-center justify-center z-10 sm:hidden"
+        >
+          <ChevronRight size={18} />
+        </button>
+      )}
+
       {isViewerOpen && selectedVibeIndex !== null && createPortal(
         <VibeViewerModal
           isOpen={isViewerOpen}
@@ -142,8 +194,7 @@ export default function VibesBar({ friendNicks, onReply }) {
             loadVibes(); // Refresh after upload
           }} 
         />,
-        document.body
       )}
-    </>
+    </div>
   );
 }

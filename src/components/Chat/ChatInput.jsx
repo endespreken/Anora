@@ -201,7 +201,7 @@ export default function ChatInput({ onSendMessage, broadcastTyping, replyingTo, 
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
             placeholder="Message..."
-            className="w-full bg-surface backdrop-blur-xl border border-border text-text placeholder-textMuted rounded-3xl py-4 pl-12 pr-28 shadow-lg shadow-black/5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300 resize-none custom-scrollbar"
+            className="w-full bg-surface backdrop-blur-xl border border-border text-text placeholder-textMuted rounded-3xl py-4 pl-12 pr-28 shadow-lg shadow-black/5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300 resize-none no-scrollbar"
             rows={1}
             style={{ minHeight: '56px', maxHeight: '150px' }}
           />
