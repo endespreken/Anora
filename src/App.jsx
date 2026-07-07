@@ -316,8 +316,15 @@ function App() {
             }
           }
 
+          // Check if this is a command response
+          const commandPrefixes = ['[WEATHER]:', '[MEME]:', '[TRANSLATE]:', '[KURS]:', '[QUIZ]:', '[QUIZ_WIN]:', '[WIKI]:', '[CRYPTO]:'];
+          const isCommandResponse = commandPrefixes.some(prefix => newMsg.content.startsWith(prefix)) || newMsg.user_pseudo === 'Anora' || newMsg.user_pseudo === 'SYSTEM';
+
           // Play sounds
-          if (isAnora) {
+          // Do not play sound if it's a command response and it was requested by someone else
+          if (isCommandResponse && newMsg.user_id !== user?.id) {
+            // No sound for other people's commands
+          } else if (isAnora) {
             soundManager.playAnora();
           } else if (isPMChannel) {
             soundManager.playReceivePM();
