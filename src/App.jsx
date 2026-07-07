@@ -22,6 +22,7 @@ import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './config/supabaseClient';
 import { soundManager } from './utils/SoundManager';
+import { decryptMessage } from './utils/encryption';
 import { markMessagesAsRead, sendMessage, fetchUnreadCountsForUser, fetchFriends, fetchFriendNicks, addFriendWithPin, removeFriend, checkIsFriend, fetchFollowedChannels, toggleFollowChannel, fetchAllVerifiedChannels } from './services/dbServices';
 import { useGlobalPresence } from './hooks/useGlobalPresence';
 import { useSettings } from './contexts/SettingsContext';
@@ -372,7 +373,7 @@ function App() {
 
             // Web Browser (WhatsApp Web style)
             if ('Notification' in window && Notification.permission === 'granted') {
-              const notification = new Notification(title, { body });
+              const notification = new Notification(title, { body, icon: '/favicon.ico' });
               notification.onclick = () => {
                 window.focus();
                 notification.close();
@@ -389,12 +390,14 @@ function App() {
           } else if (isPMChannel) {
             soundManager.playReceivePM();
             if (!isAppActiveRef.current) {
-              showNotification(`Pesan dari ${newMsg.user_pseudo}`, newMsg.content);
+              const decryptedText = decryptMessage(newMsg.content, newMsg.channel_name);
+              showNotification(`Pesan dari ${newMsg.user_pseudo}`, decryptedText);
             }
           } else if (isMention) {
             soundManager.playReceivePM(); // Same sound for mention
             if (!isAppActiveRef.current) {
-              showNotification(`Mention dari ${newMsg.user_pseudo}`, newMsg.content);
+              const decryptedText = decryptMessage(newMsg.content, newMsg.channel_name);
+              showNotification(`Mention dari ${newMsg.user_pseudo}`, decryptedText);
             }
           } else {
             soundManager.playReceiveChannel();
