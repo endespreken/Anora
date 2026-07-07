@@ -336,7 +336,28 @@ function App() {
         if (newMsg.channel_name.startsWith('@') && !isPMChannel) return;
 
         // Abaikan pesan dari space yang tidak kita ikuti (kecuali kita dimention)
-        if (!newMsg.channel_name.startsWith('@') && !isJoinedSpace && !isMention) return;
+        if (!newMsg.channel_name.startsWith('@') && !isJoinedSpace && !isMention && !newMsg.content.startsWith('[KICK]:')) return;
+
+        // Cek apakah ini event KICK untuk kita
+        if (newMsg.content.startsWith(`[KICK]:@${pseudo}|`)) {
+          const parts = newMsg.content.split('|');
+          const reason = parts[1] || 'Tidak ada alasan';
+          const byAdmin = parts[2] || 'System';
+          
+          alert(`Anda telah dikeluarkan dari channel ${newMsg.channel_name} oleh ${byAdmin}.\nAlasan: ${reason}`);
+          
+          if (newMsg.channel_name === currentChannel) {
+            setCurrentChannel('lobby');
+          }
+          
+          // Hapus channel dari daftar spaces
+          const currentSavedSpaces = JSON.parse(localStorage.getItem(`anora_spaces_${pseudo}`) || '["random"]');
+          const filteredSpaces = currentSavedSpaces.filter(ch => ch !== newMsg.channel_name);
+          localStorage.setItem(`anora_spaces_${pseudo}`, JSON.stringify(filteredSpaces));
+          window.dispatchEvent(new Event('spaces_updated'));
+          
+          return;
+        }
 
         const processMessage = () => {
           if (newMsg.channel_name === currentChannel) {

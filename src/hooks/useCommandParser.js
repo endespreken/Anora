@@ -39,6 +39,52 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
         }
         return true;
 
+      case 'kick':
+        if (args) {
+          const kickArgs = args.split(' ');
+          const target = kickArgs[0].replace('@', '');
+          const reason = kickArgs.slice(1).join(' ') || "Tidak ada alasan";
+          
+          if (!target) {
+            addLocalMessage("Format salah. Gunakan: /kick @nickname [alasan]");
+            return true;
+          }
+
+          // Fetch executor's roles
+          const executorRoles = await fetchUserRoles(pseudo);
+          const executorChannelRole = executorRoles.channelRoles.find(r => r.channel_name === currentChannel)?.role;
+          const isExecutorFO = executorRoles.isGlobalFO || executorChannelRole === 'FO';
+          const isExecutorSOP = executorChannelRole === 'SOP';
+          const isExecutorOP = executorChannelRole === 'OP';
+
+          if (!isExecutorFO && !isExecutorSOP && !isExecutorOP) {
+            addLocalMessage("Akses ditolak: Anda bukan OP di channel ini.");
+            return true;
+          }
+
+          // Fetch target's roles
+          const targetRoles = await fetchUserRoles(target);
+          const targetChannelRole = targetRoles.channelRoles.find(r => r.channel_name === currentChannel)?.role;
+          const isTargetFO = targetRoles.isGlobalFO || targetChannelRole === 'FO';
+          const isTargetSOP = targetChannelRole === 'SOP';
+          const isTargetOP = targetChannelRole === 'OP';
+
+          // Hierarchy validation (FO > SOP > OP > User)
+          let canKick = false;
+          if (isExecutorFO && !isTargetFO) canKick = true;
+          else if (isExecutorSOP && !isTargetFO && !isTargetSOP) canKick = true;
+          else if (isExecutorOP && !isTargetFO && !isTargetSOP && !isTargetOP) canKick = true;
+
+          if (canKick) {
+            await sendMessage(currentChannel, 'SYSTEM', `[KICK]:@${target}|${reason}|${pseudo}`, true);
+          } else {
+            addLocalMessage(`Akses ditolak: Anda tidak memiliki akses untuk menendang ${target}.`);
+          }
+        } else {
+          addLocalMessage("Format salah. Gunakan: /kick @nickname [alasan]");
+        }
+        return true;
+
       case 'join':
         if (args) {
           changeChannel(args);

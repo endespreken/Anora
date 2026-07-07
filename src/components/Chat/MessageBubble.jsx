@@ -54,6 +54,28 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
         </div>
       );
     }
+    
+    if (content.startsWith('[KICK]:')) {
+      const parts = content.split('|');
+      const target = parts[0].replace('[KICK]:', '');
+      const reason = parts[1] || 'Tidak ada alasan';
+      const byAdmin = parts[2] || 'System';
+      
+      return (
+        <div className="flex justify-center my-6 animate-fade-in px-4 w-full">
+          <div className="text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/30 px-6 py-3 rounded-2xl shadow-[0_0_15px_rgba(239,68,68,0.15)] text-center max-w-sm w-full">
+            <div className="flex items-center justify-center mb-1 text-red-500">
+              <span className="font-bold">{target}</span>
+              <span className="mx-1 text-red-400/70">dikeluarkan oleh</span>
+              <span className="font-bold">{byAdmin}</span>
+            </div>
+            <div className="text-xs text-red-400/80 italic mt-1">
+              " {reason} "
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="flex justify-center my-6 animate-fade-in px-4 text-center">
