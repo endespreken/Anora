@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Send, Image as ImageIcon } from 'lucide-react';
+import { X, Send, Image as ImageIcon, Type, Smile } from 'lucide-react';
+import EmojiPicker, { EmojiStyle } from 'emoji-picker-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadVibe, uploadFileToR2 } from '../../services/dbServices';
 import { compressImage } from '../../utils/image';
@@ -17,6 +18,7 @@ const BG_COLORS = [
 export default function VibeUploadModal({ isOpen, onClose }) {
   const { pseudo, isRegistered } = useAuth();
   const [content, setContent] = useState('');
+  const [caption, setCaption] = useState('');
   const [colorIndex, setColorIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState(null);
@@ -25,17 +27,53 @@ export default function VibeUploadModal({ isOpen, onClose }) {
   const containerRef = React.useRef(null);
   const [textPos, setTextPos] = useState({ x: 50, y: 50 });
   const [isDragging, setIsDragging] = useState(false);
+  const [showTextOverlay, setShowTextOverlay] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
+  
+  const captionRef = React.useRef(null);
+  const emojiRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (emojiRef.current && !emojiRef.current.contains(event.target)) {
+        setShowEmoji(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Clean up preview on unmount or close
   React.useEffect(() => {
     if (!isOpen) {
       setContent('');
+      setCaption('');
       setImageFile(null);
       setImagePreview(null);
       setTextPos({ x: 50, y: 50 });
       setIsDragging(false);
+      setShowTextOverlay(false);
+      setShowEmoji(false);
     }
   }, [isOpen]);
+
+  const handleCaptionChange = (e) => {
+    setCaption(e.target.value);
+    if (captionRef.current) {
+      captionRef.current.style.height = 'auto';
+      captionRef.current.style.height = `${Math.min(captionRef.current.scrollHeight, 120)}px`;
+    }
+  };
+
+  const onEmojiClick = (emojiObject) => {
+    setCaption(prev => prev + emojiObject.emoji);
+    if (captionRef.current) {
+      setTimeout(() => {
+        captionRef.current.style.height = 'auto';
+        captionRef.current.style.height = `${Math.min(captionRef.current.scrollHeight, 120)}px`;
+      }, 0);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -49,6 +87,7 @@ export default function VibeUploadModal({ isOpen, onClose }) {
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
     setTextPos({ x: 50, y: 50 }); // Reset position when new image selected
+    setShowTextOverlay(false);
   };
 
   const handlePointerDown = (e) => {
@@ -103,10 +142,12 @@ export default function VibeUploadModal({ isOpen, onClose }) {
 
     let finalContent = content.trim() || ' ';
     if (imageFile) {
-      // Encode coordinates for image vibes
+      // Encode coordinates and caption for image vibes
+      // If text overlay is disabled, we don't save the text overlay
       finalContent = JSON.stringify({
-        text: finalContent,
-        pos: textPos
+        text: showTextOverlay ? finalContent : ' ',
+        pos: textPos,
+        caption: caption.trim()
       });
     }
 
@@ -127,14 +168,28 @@ export default function VibeUploadModal({ isOpen, onClose }) {
         <button onClick={onClose} className="p-2 text-white/80 hover:text-white rounded-full bg-white/10 active:scale-95 transition-all">
           <X size={24} />
         </button>
-        <button 
-          onClick={handleUpload}
-          disabled={loading || (!content.trim() && !imageFile)}
-          className="flex items-center space-x-2 bg-primary hover:bg-primaryHover text-white px-5 py-2 rounded-full font-bold active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <span>{loading ? 'Posting...' : 'Share Vibe'}</span>
-          <Send size={16} />
-        </button>
+        <div className="flex items-center space-x-3">
+          {imagePreview && (
+            <button 
+              onClick={() => {
+                setShowTextOverlay(!showTextOverlay);
+                if (!showTextOverlay) setContent(''); // Clear text when enabling
+              }}
+              className={`p-2 rounded-full transition-all shadow-sm backdrop-blur-md ${showTextOverlay ? 'bg-primary text-white' : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white'}`}
+              title="Tambahkan Teks di Foto"
+            >
+              <Type size={20} />
+            </button>
+          )}
+          <button 
+            onClick={handleUpload}
+            disabled={loading || (!content.trim() && !imageFile)}
+            className="flex items-center space-x-2 bg-primary hover:bg-primaryHover text-white px-5 py-2 rounded-full font-bold active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span>{loading ? 'Posting...' : 'Share Vibe'}</span>
+            <Send size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Main Canvas Container - Flexible wrapping to keep aspect ratio */}
@@ -149,34 +204,83 @@ export default function VibeUploadModal({ isOpen, onClose }) {
             <div className="absolute inset-0 bg-black/10 rounded-3xl backdrop-blur-[1px]"></div>
           )}
           
-          <div 
-            className={`w-full px-8 relative z-10 ${imagePreview ? 'absolute cursor-move' : ''}`}
-            style={imagePreview ? {
-              top: `${textPos.y}%`,
-              left: `${textPos.x}%`,
-              transform: 'translate(-50%, -50%)',
-              touchAction: 'none' // Prevent scrolling while dragging on mobile
-            } : {}}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
-          >
-            <textarea
-              autoFocus
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder={imagePreview ? "Tambahkan caption..." : "What's your vibe today?"}
-              maxLength={150}
-              className={`w-full bg-transparent text-white text-3xl font-bold text-center resize-none outline-none placeholder:text-white/50 pointer-events-auto ${imagePreview ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]' : ''}`}
-              rows={5}
-            />
-          </div>
-          <div className="absolute bottom-4 right-6 text-white/60 text-sm font-medium z-20 pointer-events-none">
-            {content.length}/150
-          </div>
+          {(!imagePreview || showTextOverlay) && (
+            <div 
+              className={`w-full px-8 relative z-10 ${imagePreview ? 'absolute cursor-move' : ''}`}
+              style={imagePreview ? {
+                top: `${textPos.y}%`,
+                left: `${textPos.x}%`,
+                transform: 'translate(-50%, -50%)',
+                touchAction: 'none' // Prevent scrolling while dragging on mobile
+              } : {}}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+            >
+              <textarea
+                autoFocus={!imagePreview || showTextOverlay}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder={imagePreview ? "Ketik sesuatu..." : "What's your vibe today?"}
+                maxLength={150}
+                className={`w-full bg-transparent text-white text-3xl font-bold text-center resize-none outline-none placeholder:text-white/50 pointer-events-auto ${imagePreview ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]' : ''}`}
+                rows={5}
+              />
+            </div>
+          )}
+          
+          {(!imagePreview || showTextOverlay) && (
+            <div className="absolute bottom-4 right-6 text-white/60 text-sm font-medium z-20 pointer-events-none">
+              {content.length}/150
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Caption Input for Image */}
+      {imagePreview && (
+        <div className="w-full max-w-sm mx-auto mt-4 animate-fade-in relative">
+          
+          {showEmoji && (
+            <div ref={emojiRef} className="absolute bottom-full mb-4 right-0 z-50 animate-slide-up shadow-2xl rounded-2xl overflow-hidden border border-border">
+              <EmojiPicker 
+                onEmojiClick={onEmojiClick} 
+                theme="dark"
+                emojiStyle={EmojiStyle.TWEMOJI}
+                searchDisabled={true}
+                skinTonesDisabled={true}
+                height={320}
+                width={300}
+                previewConfig={{ showPreview: false }}
+              />
+            </div>
+          )}
+
+          <div className="relative flex items-end">
+            <textarea
+              ref={captionRef}
+              value={caption}
+              onChange={handleCaptionChange}
+              placeholder="Tambahkan caption..."
+              maxLength={100}
+              rows={1}
+              className="w-full bg-white/10 text-white placeholder:text-white/60 border border-white/20 rounded-3xl py-3 pl-5 pr-12 outline-none focus:bg-white/20 transition-all backdrop-blur-md resize-none custom-scrollbar"
+              style={{ minHeight: '48px', maxHeight: '120px' }}
+            />
+            
+            <div className="absolute right-2 bottom-1.5 flex items-center">
+              <button 
+                type="button"
+                onClick={() => setShowEmoji(!showEmoji)}
+                className={`p-2 rounded-full transition-all duration-200 focus:outline-none ${showEmoji ? 'text-primary bg-primary/20' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+              >
+                <Smile size={20} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Color Picker & Image Upload */}
       <div className="mt-4 sm:mt-8 w-full">

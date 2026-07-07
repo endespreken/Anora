@@ -197,7 +197,15 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ user, trueUserId, pseudo, changePseudo, isRegistered, markAsRegistered, loading, allRegisteredNicks, allVerifiedNicks, registeredProfiles, permanentPin, pendingRequests, setPendingRequests }}>
-      {!loading && children}
+      {loading ? (
+        <div className="flex items-center justify-center h-[100dvh] w-full bg-background transition-colors duration-300">
+          <div className="w-20 h-20 animate-pulse opacity-70">
+            <img src="https://snixuzaslqdnbduqmazs.supabase.co/storage/v1/object/public/Asset/Logo%20Apps%20Mobile.png" alt="Loading Anora" className="w-full h-full object-contain drop-shadow-xl" />
+          </div>
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 }

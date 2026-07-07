@@ -20,11 +20,13 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
 
   let parsedContent = currentVibe?.content || '';
   let textPos = null;
+  let vibeCaption = '';
   try {
     const data = JSON.parse(parsedContent);
-    if (data && data.text && data.pos) {
+    if (data && data.text !== undefined && data.pos) {
       parsedContent = data.text;
       textPos = data.pos;
+      if (data.caption) vibeCaption = data.caption;
     }
   } catch (e) {
     // legacy format, keep as is
@@ -218,8 +220,18 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
         ></div>
       )}
 
-      {/* Bottom Area: Views (if owner) OR Reply (if other) */}
-      <div className="absolute bottom-0 left-0 w-full z-20 pointer-events-none">
+      {/* Bottom Area: Caption + Views/Reply */}
+      <div className="absolute bottom-0 left-0 w-full z-20 pointer-events-none flex flex-col justify-end">
+        
+        {/* Caption Display */}
+        {vibeCaption && (
+          <div className="w-full text-center px-6 pb-2 animate-fade-in pointer-events-auto">
+            <p className="text-white text-sm sm:text-base font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] inline-block bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl max-w-sm w-full mx-auto break-words whitespace-pre-wrap border border-white/10">
+              {vibeCaption}
+            </p>
+          </div>
+        )}
+
         {isMyVibe ? (
           <div className="w-full flex flex-col items-center pointer-events-auto">
             <button 

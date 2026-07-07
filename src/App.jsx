@@ -802,6 +802,7 @@ function App() {
             broadcastTyping={globalBroadcastTyping}
             replyingTo={replyingTo}
             onCancelReply={() => setReplyingTo(null)}
+            onlineUsers={onlineUsers}
           />
         </div>
       </div>
