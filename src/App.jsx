@@ -317,15 +317,15 @@ function App() {
           }
 
           // Check if this is a command response
-          const commandPrefixes = ['[WEATHER]:', '[MEME]:', '[TRANSLATE]:', '[KURS]:', '[QUIZ]:', '[QUIZ_WIN]:', '[WIKI]:', '[CRYPTO]:'];
+          const commandPrefixes = ['[WEATHER]:', '[MEME]:', '[TRANSLATE]:', '[KURS]:', '[QUIZ]:', '[QUIZ_WIN]:', '[WIKI]:', '[CRYPTO]:', '[TEBAKKATA]:'];
           const isCommandResponse = commandPrefixes.some(prefix => newMsg.content.startsWith(prefix)) || newMsg.user_pseudo === 'Anora' || newMsg.user_pseudo === 'SYSTEM';
 
           // Play sounds
           // Do not play sound if it's a command response and it was requested by someone else
-          if (isCommandResponse && newMsg.user_id !== user?.id) {
+          if (isAnora) {
+            // Anora is completely silent for all users
+          } else if (isCommandResponse && newMsg.user_id !== user?.id) {
             // No sound for other people's commands
-          } else if (isAnora) {
-            soundManager.playAnora();
           } else if (isPMChannel) {
             soundManager.playReceivePM();
           } else if (isMention) {

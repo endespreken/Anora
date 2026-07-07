@@ -4,7 +4,7 @@ import emoji from 'react-easy-emoji';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import LinkPreview from './LinkPreview';
-import { QuizCard, WikiCard, CryptoCard, KursCard, WeatherCard, MemeCard, TranslateCard } from './ChatCards';
+import { QuizCard, WikiCard, CryptoCard, KursCard, WeatherCard, MemeCard, TranslateCard, TebakKataCard } from './ChatCards';
 
 const safeJsonParse = (str) => {
   try {
@@ -33,6 +33,14 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
       return (
         <div className="flex justify-center my-6 animate-fade-in w-full px-4">
           <QuizCard data={safeJsonParse(content.substring(7))} currentChannel={message.channel_name} pseudo={pseudo} />
+        </div>
+      );
+    }
+    
+    if (content.startsWith('[TEBAKKATA]:') && safeJsonParse(content.substring(12))) {
+      return (
+        <div className="flex justify-center my-6 animate-fade-in w-full px-4">
+          <TebakKataCard data={safeJsonParse(content.substring(12))} currentChannel={message.channel_name} pseudo={pseudo} />
         </div>
       );
     }
@@ -331,7 +339,7 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
                     </span>
                   )}
                 </div>
-                {firstUrl && !content.startsWith('[QUIZ]') && !content.startsWith('[WIKI]') && !content.startsWith('[CRYPTO]') && !content.startsWith('[KURS]') && !content.startsWith('[WEATHER]') && !content.startsWith('[MEME]') && !content.startsWith('[TRANSLATE]') && (
+                {firstUrl && !content.startsWith('[QUIZ]') && !content.startsWith('[WIKI]') && !content.startsWith('[CRYPTO]') && !content.startsWith('[KURS]') && !content.startsWith('[WEATHER]') && !content.startsWith('[MEME]') && !content.startsWith('[TRANSLATE]') && !content.startsWith('[TEBAKKATA]') && (
                   <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                     {getYouTubeId(firstUrl) ? (
                       <div className="relative w-full sm:w-80 rounded-xl overflow-hidden bg-black aspect-video">

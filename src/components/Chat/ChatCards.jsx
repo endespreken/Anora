@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { supabase } from '../../config/supabaseClient';
-import { ExternalLink, HelpCircle, TrendingUp, BookOpen, Check, X, Banknote, CloudRain, Image as ImageIcon, Languages } from 'lucide-react';
+import { ExternalLink, HelpCircle, TrendingUp, BookOpen, Check, X, Banknote, CloudRain, Image as ImageIcon, Languages, Type } from 'lucide-react';
 
 export const QuizCard = ({ data, currentChannel, pseudo }) => {
   const [answered, setAnswered] = useState(false);
@@ -196,6 +196,85 @@ export const TranslateCard = ({ data }) => {
         <div className="bg-primary/10 p-2.5 rounded-lg border border-primary/20">
           <span className="text-[10px] text-primary uppercase font-bold tracking-wider mb-1 block">Indonesian</span>
           <p className="text-sm font-medium text-text leading-relaxed">{data.translated}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const TebakKataCard = ({ data, currentChannel, pseudo }) => {
+  const [answered, setAnswered] = useState(false);
+  const [answerInput, setAnswerInput] = useState('');
+
+  const handleGuess = async () => {
+    if (answered || !answerInput.trim()) return;
+    
+    if (answerInput.trim().toUpperCase() === data.answer.toUpperCase()) {
+      setAnswered(true);
+      try {
+        await supabase.from('messages').insert([{
+          channel_name: currentChannel,
+          user_pseudo: 'Anora',
+          content: `🎉 Hebat! **${pseudo}** berhasil menebak kata: **${data.answer}**!`,
+          is_system_msg: false,
+          created_at: new Date().toISOString()
+        }]);
+      } catch(err) {
+        console.error(err);
+      }
+    } else {
+      // Salah tebak, kosongkan input atau beri feedback visual
+      setAnswerInput('');
+    }
+  };
+
+  return (
+    <div className="bg-surface border border-border p-4 rounded-xl w-full max-w-sm mt-1 shadow-lg relative overflow-hidden group">
+      <div className="absolute -right-6 -top-6 text-primary/5 rotate-12 pointer-events-none">
+        <Type size={100} />
+      </div>
+      
+      <div className="flex items-center justify-between mb-4 relative z-10">
+        <div className="flex items-center space-x-2 text-primary font-semibold text-xs tracking-wider uppercase">
+          <Type size={14} />
+          <span>Tebak Kata</span>
+        </div>
+      </div>
+      
+      <div className="space-y-4 relative z-10">
+        <div className="bg-secondary/30 p-3 rounded-lg border border-border/50 text-center">
+          <p className="text-xs text-textMuted uppercase tracking-wider mb-2 font-semibold">Petunjuk</p>
+          <p className="text-sm text-text font-medium">{data.clue}</p>
+        </div>
+        
+        <div className="flex justify-center items-center py-2">
+          <p className="text-2xl font-mono font-bold tracking-[0.3em] text-accent">
+            {data.censored}
+          </p>
+        </div>
+        
+        <div className="flex space-x-2 mt-4">
+          <input 
+            type="text" 
+            value={answerInput}
+            onChange={(e) => setAnswerInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleGuess();
+              }
+            }}
+            placeholder="Ketik jawabanmu..."
+            disabled={answered}
+            className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-text placeholder-textMuted focus:outline-none focus:border-primary disabled:opacity-50"
+          />
+          <button 
+            onClick={handleGuess}
+            disabled={answered || !answerInput.trim()}
+            className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Tebak!
+          </button>
         </div>
       </div>
     </div>

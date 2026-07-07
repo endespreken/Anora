@@ -3,6 +3,7 @@ import { sendMessage, addFriendWithPin, checkNicknameExists, checkEmailExists, r
 
 import { getRandomTrivia } from '../utils/trivia_id';
 import { getRandomJoke } from '../utils/jokes_id';
+import { generateTebakKata } from '../utils/tebak_kata_id';
 
 export function useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage, joinedSpaces = [], privateChannels = [], openFOPortal) {
   const { user, pseudo, changePseudo, isRegistered, markAsRegistered, permanentPin } = useAuth();
@@ -170,7 +171,8 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
 9. /meme - Tampilkan meme random dari Reddit
 10. /translate [teks] - Terjemahkan ke B. Indonesia
 11. /jokes - Anora akan kasih tebak-tebakan lucu
-12. /quiz - Mainkan kuis trivia interaktif`;
+12. /quiz - Mainkan kuis trivia interaktif
+13. /tebak - Mainkan mini-game tebak kata`;
           
           addLocalMessage(helpText);
         }, 500);
@@ -267,6 +269,16 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
           await sendMessage(currentChannel, 'System', `[QUIZ]:${JSON.stringify(quizData)}`, true, null, null);
         } catch (err) {
           addLocalMessage("Gagal memuat kuis.");
+        }
+        return true;
+
+      case 'tebak':
+      case 'tebakkata':
+        try {
+          const t = generateTebakKata();
+          await sendMessage(currentChannel, 'System', `[TEBAKKATA]:${JSON.stringify(t)}`, true, null, null);
+        } catch (err) {
+          addLocalMessage("Gagal memuat tebak kata.");
         }
         return true;
 
