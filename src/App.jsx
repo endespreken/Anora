@@ -32,6 +32,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
 import NativeAlert from './components/Modals/NativeAlert';
+import NativeConfirm from './components/Modals/NativeConfirm';
 
 function App() {
   const [currentChannel, setCurrentChannel] = useState('random');
@@ -47,6 +48,7 @@ function App() {
   const [isJoinChannelModalOpen, setIsJoinChannelModalOpen] = useState(false);
   const [isFOPortalOpen, setIsFOPortalOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ isOpen: false, message: '' });
+  const [confirmExitConfig, setConfirmExitConfig] = useState({ isOpen: false });
   const [verifiedChannels, setVerifiedChannels] = useState([]);
   
   const [pendingVibeReply, setPendingVibeReply] = useState(null);
@@ -572,6 +574,15 @@ function App() {
   const isPopStateClose = useRef(false);
 
   useEffect(() => {
+    // Push a base state to intercept the final back button on web
+    if (!Capacitor.isNativePlatform()) {
+      if (!window.history.state || !window.history.state.isAnoraBase) {
+        window.history.pushState({ isAnoraBase: true }, '');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     const handlePopState = () => {
       // If we manually called window.history.back(), ignore this event
       if (manualBackCount.current > 0) {
@@ -579,16 +590,27 @@ function App() {
         return;
       }
       
-      // Mark that the upcoming state change is caused by popstate
-      isPopStateClose.current = true;
+      const hasOpenModal = isPinModalOpen || isNearbyModalOpen || isOnlineModalOpen || isSettingsModalOpen || isFOPortalOpen || isMobileChatOpen;
       
-      // Close the topmost modal/view (same order as Capacitor)
-      if (isPinModalOpen) setIsPinModalOpen(false);
-      else if (isNearbyModalOpen) setIsNearbyModalOpen(false);
-      else if (isOnlineModalOpen) setIsOnlineModalOpen(false);
-      else if (isSettingsModalOpen) setIsSettingsModalOpen(false);
-      else if (isFOPortalOpen) setIsFOPortalOpen(false);
-      else if (isMobileChatOpen) setIsMobileChatOpen(false);
+      if (hasOpenModal) {
+        // Mark that the upcoming state change is caused by popstate
+        isPopStateClose.current = true;
+        
+        // Close the topmost modal/view (same order as Capacitor)
+        if (isPinModalOpen) setIsPinModalOpen(false);
+        else if (isNearbyModalOpen) setIsNearbyModalOpen(false);
+        else if (isOnlineModalOpen) setIsOnlineModalOpen(false);
+        else if (isSettingsModalOpen) setIsSettingsModalOpen(false);
+        else if (isFOPortalOpen) setIsFOPortalOpen(false);
+        else if (isMobileChatOpen) setIsMobileChatOpen(false);
+      } else {
+        // No modal was open. User wants to exit the app.
+        if (!Capacitor.isNativePlatform()) {
+          // Prevent exit by pushing state back
+          window.history.pushState({ isAnoraBase: true }, '');
+          setConfirmExitConfig({ isOpen: true });
+        }
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -986,6 +1008,20 @@ function App() {
         isOpen={alertConfig.isOpen} 
         message={alertConfig.message} 
         onClose={() => setAlertConfig({ isOpen: false, message: '' })} 
+      />
+
+      <NativeConfirm
+        isOpen={confirmExitConfig.isOpen}
+        title="Keluar Aplikasi"
+        message="Apakah Anda yakin ingin keluar dari Anora?"
+        confirmText="Ya, Keluar"
+        cancelText="Batal"
+        onConfirm={() => {
+          setConfirmExitConfig({ isOpen: false });
+          manualBackCount.current += 2;
+          window.history.go(-2);
+        }}
+        onCancel={() => setConfirmExitConfig({ isOpen: false })}
       />
     </div>
   );
