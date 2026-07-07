@@ -12,6 +12,8 @@
   "dependencies": {
     "@capacitor/app": "^8.1.0",
     "@capacitor/core": "^8.4.1",
+    "@capacitor/geolocation": "^8.2.0",
+    "@capacitor/local-notifications": "^8.2.0",
     "@supabase/supabase-js": "^2.43.0",
     "crypto-js": "^4.2.0",
     "emoji-picker-react": "^4.19.1",

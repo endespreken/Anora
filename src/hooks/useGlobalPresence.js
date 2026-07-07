@@ -1,12 +1,50 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../config/supabaseClient';
 import { useSettings } from '../contexts/SettingsContext';
+import { Geolocation } from '@capacitor/geolocation';
 
 export function useGlobalPresence(user, pseudo, joinedSpaces, privateChannels) {
   const [globalOnlineUsers, setGlobalOnlineUsers] = useState([]);
+  const [locationPermissionDenied, setLocationPermissionDenied] = useState(false);
   const channelRef = useRef(null);
   const locationRef = useRef({ lat: null, lng: null });
   const { incognitoMode } = useSettings();
+
+  const handleRequestLocation = async () => {
+    try {
+      const currentPermissions = await Geolocation.checkPermissions();
+      let hasPermission = currentPermissions.location === 'granted';
+      
+      if (!hasPermission) {
+        const newPermissions = await Geolocation.requestPermissions();
+        hasPermission = newPermissions.location === 'granted';
+      }
+
+      if (hasPermission) {
+        setLocationPermissionDenied(false);
+        const position = await Geolocation.getCurrentPosition({ timeout: 10000 });
+        locationRef.current = { lat: position.coords.latitude, lng: position.coords.longitude };
+        
+        // Update presence if channel is active
+        if (channelRef.current && user && pseudo) {
+          channelRef.current.track({
+            user_id: user.id,
+            pseudo: pseudo,
+            online_at: new Date().toISOString(),
+            lat: incognitoMode ? null : locationRef.current.lat,
+            lng: incognitoMode ? null : locationRef.current.lng,
+            spaces: joinedSpaces,
+            pms: privateChannels
+          }).catch(() => {});
+        }
+      } else {
+        setLocationPermissionDenied(true);
+      }
+    } catch (error) {
+      console.log('Geolocation error or denied:', error);
+      setLocationPermissionDenied(true);
+    }
+  };
 
   useEffect(() => {
     if (!user || !pseudo) return;
@@ -40,16 +78,8 @@ export function useGlobalPresence(user, pseudo, joinedSpaces, privateChannels) {
           // Track presence immediately so user shows as online without waiting for geolocation prompt
           trackPresence();
 
-          if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-              (position) => trackPresence(position.coords.latitude, position.coords.longitude),
-              (error) => {
-                 console.log('Geolocation error or denied, fallback to null location', error);
-                 // Already tracked without location, no need to re-track unless we want to log
-              },
-              { timeout: 10000 } // Don't hang indefinitely
-            );
-          }
+          // Request location safely using Capacitor
+          handleRequestLocation();
         }
       });
 
@@ -76,5 +106,5 @@ export function useGlobalPresence(user, pseudo, joinedSpaces, privateChannels) {
     }
   }, [joinedSpaces, privateChannels, user, pseudo, incognitoMode]);
 
-  return { globalOnlineUsers };
+  return { globalOnlineUsers, locationPermissionDenied, handleRequestLocation };
 }

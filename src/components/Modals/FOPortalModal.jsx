@@ -151,8 +151,8 @@ export default function FOPortalModal({ isOpen, onClose, onVerifiedUpdated }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="bg-surface border border-border rounded-2xl w-full max-w-md shadow-2xl relative animate-scale-up flex flex-col overflow-hidden max-h-[90vh]">
-        <div className="p-4 md:p-6 border-b border-border flex justify-between items-center bg-surface/50 sticky top-0 z-10">
+      <div className="bg-surface border border-border rounded-2xl w-full max-w-[95vw] md:max-w-md shadow-2xl relative animate-scale-up flex flex-col overflow-hidden max-h-[85vh]">
+        <div className="p-4 md:p-6 border-b border-border flex justify-between items-center bg-surface/50 sticky top-0 z-10 shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
               <Shield size={20} />

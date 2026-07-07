@@ -38,10 +38,10 @@ export default function SettingsModal({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[250] flex items-center justify-center bg-background/80 backdrop-blur-md animate-fade-in p-4" onClick={onClose}>
-      <div className="bg-surface w-full max-w-md max-h-[90vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden border border-border animate-scale-up" onClick={e => e.stopPropagation()}>
+      <div className="bg-surface w-full max-w-[95vw] md:max-w-md max-h-[85vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden border border-border animate-scale-up" onClick={e => e.stopPropagation()}>
         
         {/* Header */}
-        <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-secondary/30">
+        <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-secondary/30 shrink-0">
           <h2 className="text-xl font-bold text-text">Pengaturan</h2>
           <button 
             onClick={onClose}

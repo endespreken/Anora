@@ -115,10 +115,10 @@ export default function ProfileModal({ isOpen, onClose, targetNickname, onMessag
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center bg-background/80 backdrop-blur-md animate-fade-in p-4" onClick={onClose}>
       <div 
-        className="bg-surface w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-border animate-scale-up flex flex-col max-h-[90vh]" 
+        className="bg-surface w-full max-w-[95vw] md:max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-border animate-scale-up flex flex-col max-h-[85vh]" 
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
           <h2 className="font-bold text-lg text-text">Profil Pengguna</h2>
           <button 
             onClick={onClose}

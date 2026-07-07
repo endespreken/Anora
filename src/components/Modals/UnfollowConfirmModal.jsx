@@ -15,7 +15,7 @@ export default function UnfollowConfirmModal({ isOpen, onClose, targetUserNick, 
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-background/80 backdrop-blur-md animate-fade-in p-4" onClick={onClose}>
-      <div className="bg-surface w-full max-w-xs flex flex-col rounded-3xl shadow-2xl overflow-hidden border border-border animate-scale-up" onClick={e => e.stopPropagation()}>
+      <div className="bg-surface w-full max-w-[95vw] md:max-w-xs flex flex-col rounded-3xl shadow-2xl overflow-hidden border border-border animate-scale-up max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         
         <div className="p-6 text-center">
           <div className="w-16 h-16 bg-accent/10 text-accent rounded-full flex items-center justify-center mx-auto mb-4">

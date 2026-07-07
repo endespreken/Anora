@@ -16,6 +16,7 @@ import LoginModal from './components/Modals/LoginModal';
 import ChangeNicknameModal from './components/Modals/ChangeNicknameModal';
 import JoinChannelModal from './components/Modals/JoinChannelModal';
 import FOPortalModal from './components/Modals/FOPortalModal';
+import LocationRequiredModal from './components/Modals/LocationRequiredModal';
 import { useChatRealtime } from './hooks/useChatRealtime';
 import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
@@ -26,6 +27,7 @@ import { useGlobalPresence } from './hooks/useGlobalPresence';
 import { useSettings } from './contexts/SettingsContext';
 import Home from './components/Home/Home';
 import { App as CapApp } from '@capacitor/app';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 function App() {
   const [currentChannel, setCurrentChannel] = useState('random');
@@ -68,7 +70,45 @@ function App() {
   const [targetFollowUser, setTargetFollowUser] = useState('');
   const [unfollowTargetIsSpace, setUnfollowTargetIsSpace] = useState(false);
   const globalChannelRef = useRef(null);
+  const isAppActiveRef = useRef(true);
   const { friendsOnlyPM } = useSettings();
+
+  useEffect(() => {
+    const initNotifications = async () => {
+      try {
+        await LocalNotifications.requestPermissions();
+      } catch (err) {
+        console.warn('LocalNotifications permission error:', err);
+      }
+      
+      // Request Web Notifications (WhatsApp Web style)
+      if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission();
+      }
+    };
+    initNotifications();
+
+    const setupAppState = async () => {
+      try {
+        await CapApp.addListener('appStateChange', ({ isActive }) => {
+          isAppActiveRef.current = isActive;
+        });
+      } catch (err) {
+        console.warn('CapApp listener error:', err);
+      }
+    };
+    setupAppState();
+    
+    // Fallback for Web Browser visibility
+    const handleVisibilityChange = () => {
+      isAppActiveRef.current = !document.hidden;
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     const activeUserId = trueUserId || user?.id;
@@ -168,7 +208,7 @@ function App() {
   const { messages, typingUsers, loading, setMessages, broadcastTyping } = useChatRealtime(currentChannel, user, pseudo);
 
   // Global Presence
-  const { globalOnlineUsers } = useGlobalPresence(user, pseudo, joinedSpaces, privateChannels);
+  const { globalOnlineUsers, locationPermissionDenied, handleRequestLocation } = useGlobalPresence(user, pseudo, joinedSpaces, privateChannels);
   
   // Filter online users for current room
   const onlineUsers = globalOnlineUsers.filter(u => {
@@ -320,6 +360,26 @@ function App() {
           const commandPrefixes = ['[WEATHER]:', '[MEME]:', '[TRANSLATE]:', '[KURS]:', '[QUIZ]:', '[QUIZ_WIN]:', '[WIKI]:', '[CRYPTO]:', '[TEBAKKATA]:'];
           const isCommandResponse = commandPrefixes.some(prefix => newMsg.content.startsWith(prefix)) || newMsg.user_pseudo === 'Anora' || newMsg.user_pseudo === 'SYSTEM';
 
+          const showNotification = (title, body) => {
+            // Native Mobile (Capacitor)
+            LocalNotifications.schedule({
+              notifications: [{
+                title,
+                body,
+                id: new Date().getTime() % 1000000,
+              }]
+            }).catch(e => console.warn(e));
+
+            // Web Browser (WhatsApp Web style)
+            if ('Notification' in window && Notification.permission === 'granted') {
+              const notification = new Notification(title, { body });
+              notification.onclick = () => {
+                window.focus();
+                notification.close();
+              };
+            }
+          };
+
           // Play sounds
           // Do not play sound if it's a command response and it was requested by someone else
           if (isAnora) {
@@ -328,8 +388,14 @@ function App() {
             // No sound for other people's commands
           } else if (isPMChannel) {
             soundManager.playReceivePM();
+            if (!isAppActiveRef.current) {
+              showNotification(`Pesan dari ${newMsg.user_pseudo}`, newMsg.content);
+            }
           } else if (isMention) {
             soundManager.playReceivePM(); // Same sound for mention
+            if (!isAppActiveRef.current) {
+              showNotification(`Mention dari ${newMsg.user_pseudo}`, newMsg.content);
+            }
           } else {
             soundManager.playReceiveChannel();
           }
@@ -804,6 +870,11 @@ function App() {
         isOpen={isFOPortalOpen} 
         onClose={() => setIsFOPortalOpen(false)} 
         onVerifiedUpdated={reloadVerifiedChannels}
+      />
+
+      <LocationRequiredModal
+        isOpen={locationPermissionDenied}
+        onRequestPermission={handleRequestLocation}
       />
     </div>
   );

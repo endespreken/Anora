@@ -35,10 +35,10 @@ export default function NotificationsModal({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 backdrop-blur-md animate-fade-in px-4">
-      <div className="bg-surface w-full max-w-md rounded-[32px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col max-h-[85vh] animate-scale-in relative">
+      <div className="bg-surface w-full max-w-[95vw] md:max-w-md rounded-[32px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col max-h-[85vh] animate-scale-in relative">
         
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/5 bg-gradient-to-r from-surface to-secondary/30">
+        <div className="flex items-center justify-between p-6 border-b border-white/5 bg-gradient-to-r from-surface to-secondary/30 shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
               <UserPlus size={20} />

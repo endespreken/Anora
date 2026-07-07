@@ -24,7 +24,7 @@ export default function PinGeneratorModal({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
-      <div className="bg-surface backdrop-blur-xl border border-border w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative animate-slide-up">
+      <div className="bg-surface backdrop-blur-xl border border-border w-full max-w-[95vw] md:max-w-md rounded-3xl shadow-2xl overflow-hidden relative animate-slide-up flex flex-col max-h-[85vh] overflow-y-auto">
         
         <div className="h-2 w-full bg-gradient-to-r from-primary to-accent"></div>
         

@@ -10,8 +10,8 @@ export default function OnlineUsersModal({ isOpen, onClose, onlineUsers, onUserC
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-md animate-fade-in px-4">
-      <div className="bg-surface w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-border animate-scale-up">
-        <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-secondary/30">
+      <div className="bg-surface w-full max-w-[95vw] md:max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-border animate-scale-up flex flex-col max-h-[85vh]">
+        <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-secondary/30 shrink-0">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-primary/10 text-primary rounded-xl">
               <Users size={20} />
