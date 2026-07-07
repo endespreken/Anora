@@ -194,6 +194,7 @@ export default function VibesBar({ friendNicks, onReply }) {
             loadVibes(); // Refresh after upload
           }} 
         />,
+        document.body
       )}
     </div>
   );
