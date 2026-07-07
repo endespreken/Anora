@@ -373,7 +373,10 @@ function App() {
 
             // Web Browser (WhatsApp Web style)
             if ('Notification' in window && Notification.permission === 'granted') {
-              const notification = new Notification(title, { body, icon: '/favicon.ico' });
+              const notification = new Notification(title, { 
+                body, 
+                icon: 'https://snixuzaslqdnbduqmazs.supabase.co/storage/v1/object/public/Asset/Logo%20Apps%20Mobile.png' 
+              });
               notification.onclick = () => {
                 window.focus();
                 notification.close();

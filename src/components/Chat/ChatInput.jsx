@@ -7,6 +7,14 @@ export default function ChatInput({ onSendMessage, broadcastTyping, replyingTo, 
   const [showEmoji, setShowEmoji] = useState(false);
   const typingTimeoutRef = useRef(null);
   const emojiRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
+    }
+  }, [text]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -45,6 +53,15 @@ export default function ChatInput({ onSendMessage, broadcastTyping, replyingTo, 
     setText(prev => prev + emojiObject.emoji);
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (text.trim()) {
+        handleSubmit(e);
+      }
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 bg-transparent relative">
       <div className="max-w-5xl mx-auto relative">
@@ -79,20 +96,22 @@ export default function ChatInput({ onSendMessage, broadcastTyping, replyingTo, 
         )}
         
         <form onSubmit={handleSubmit} className="relative flex items-center">
-          <div className="absolute left-4 text-textMuted pointer-events-none">
+          <div className="absolute left-4 top-4 text-textMuted pointer-events-none">
             <Command size={20} />
           </div>
           
-          <input
-            type="text"
+          <textarea
+            ref={textareaRef}
             value={text}
             onChange={handleTextChange}
+            onKeyDown={handleKeyDown}
             placeholder="Message or type /help for commands..."
-            className="w-full bg-surface backdrop-blur-xl border border-border text-text placeholder-textMuted rounded-full py-4 pl-12 pr-28 shadow-lg shadow-black/5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300"
-            autoComplete="off"
+            className="w-full bg-surface backdrop-blur-xl border border-border text-text placeholder-textMuted rounded-3xl py-4 pl-12 pr-28 shadow-lg shadow-black/5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300 resize-none custom-scrollbar"
+            rows={1}
+            style={{ minHeight: '56px', maxHeight: '150px' }}
           />
           
-          <div className="absolute right-2 flex items-center space-x-1">
+          <div className="absolute right-2 bottom-1.5 flex items-center space-x-1">
             <button 
               type="button"
               onClick={() => setShowEmoji(!showEmoji)}
