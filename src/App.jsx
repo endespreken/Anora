@@ -565,6 +565,60 @@ function App() {
     };
   }, [isPinModalOpen, isNearbyModalOpen, isOnlineModalOpen, isSettingsModalOpen, isMobileChatOpen, isFOPortalOpen]);
 
+  // Web Browser Back Button Handler (SPA routing simulation)
+  const activeModalsCount = [isPinModalOpen, isNearbyModalOpen, isOnlineModalOpen, isSettingsModalOpen, isFOPortalOpen, isMobileChatOpen].filter(Boolean).length;
+  const prevModalsCount = useRef(activeModalsCount);
+  const manualBackCount = useRef(0);
+  const isPopStateClose = useRef(false);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      // If we manually called window.history.back(), ignore this event
+      if (manualBackCount.current > 0) {
+        manualBackCount.current -= 1;
+        return;
+      }
+      
+      // Mark that the upcoming state change is caused by popstate
+      isPopStateClose.current = true;
+      
+      // Close the topmost modal/view (same order as Capacitor)
+      if (isPinModalOpen) setIsPinModalOpen(false);
+      else if (isNearbyModalOpen) setIsNearbyModalOpen(false);
+      else if (isOnlineModalOpen) setIsOnlineModalOpen(false);
+      else if (isSettingsModalOpen) setIsSettingsModalOpen(false);
+      else if (isFOPortalOpen) setIsFOPortalOpen(false);
+      else if (isMobileChatOpen) setIsMobileChatOpen(false);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isPinModalOpen, isNearbyModalOpen, isOnlineModalOpen, isSettingsModalOpen, isMobileChatOpen, isFOPortalOpen]);
+
+  useEffect(() => {
+    if (activeModalsCount > prevModalsCount.current) {
+      // Modal opened manually: push state
+      const diff = activeModalsCount - prevModalsCount.current;
+      for (let i = 0; i < diff; i++) {
+        window.history.pushState({ anoraModal: true }, '');
+      }
+    } else if (activeModalsCount < prevModalsCount.current) {
+      // Modal closed
+      if (isPopStateClose.current) {
+        // Closed via popstate (browser back). History already popped.
+        isPopStateClose.current = false;
+      } else {
+        // Closed manually via UI. Pop history to match.
+        const diff = prevModalsCount.current - activeModalsCount;
+        manualBackCount.current += diff;
+        for (let i = 0; i < diff; i++) {
+          window.history.back();
+        }
+      }
+    }
+    prevModalsCount.current = activeModalsCount;
+  }, [activeModalsCount]);
+
   const handleMarkAsRead = (channelToMark) => {
     if (pseudo) {
       markMessagesAsRead(channelToMark, pseudo);
