@@ -15,12 +15,13 @@ import ProfileModal from './components/Modals/ProfileModal';
 import LoginModal from './components/Modals/LoginModal';
 import ChangeNicknameModal from './components/Modals/ChangeNicknameModal';
 import JoinChannelModal from './components/Modals/JoinChannelModal';
+import FOPortalModal from './components/Modals/FOPortalModal';
 import { useChatRealtime } from './hooks/useChatRealtime';
 import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './config/supabaseClient';
 import { soundManager } from './utils/SoundManager';
-import { markMessagesAsRead, sendMessage, fetchUnreadCountsForUser, fetchFriends, fetchFriendNicks, addFriendWithPin, removeFriend, checkIsFriend, fetchFollowedChannels, toggleFollowChannel } from './services/dbServices';
+import { markMessagesAsRead, sendMessage, fetchUnreadCountsForUser, fetchFriends, fetchFriendNicks, addFriendWithPin, removeFriend, checkIsFriend, fetchFollowedChannels, toggleFollowChannel, fetchAllVerifiedChannels } from './services/dbServices';
 import { useGlobalPresence } from './hooks/useGlobalPresence';
 import { useSettings } from './contexts/SettingsContext';
 import Home from './components/Home/Home';
@@ -38,6 +39,8 @@ function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isChangeNicknameModalOpen, setIsChangeNicknameModalOpen] = useState(false);
   const [isJoinChannelModalOpen, setIsJoinChannelModalOpen] = useState(false);
+  const [isFOPortalOpen, setIsFOPortalOpen] = useState(false);
+  const [verifiedChannels, setVerifiedChannels] = useState([]);
   
   const [pendingVibeReply, setPendingVibeReply] = useState(null);
   const [activeMobileTab, setActiveMobileTab] = useState('pms');
@@ -123,6 +126,14 @@ function App() {
       }
     }
   }, [pseudo, isRegistered]);
+
+  const reloadVerifiedChannels = () => {
+    fetchAllVerifiedChannels().then(channels => setVerifiedChannels(channels));
+  };
+
+  useEffect(() => {
+    reloadVerifiedChannels();
+  }, []);
 
   const handlePinChat = (channel) => {
     setPinnedChannels(prev => {
@@ -412,6 +423,8 @@ function App() {
             setIsOnlineModalOpen(false);
           } else if (isSettingsModalOpen) {
             setIsSettingsModalOpen(false);
+          } else if (isFOPortalOpen) {
+            setIsFOPortalOpen(false);
           } else if (isMobileChatOpen) {
             setIsMobileChatOpen(false);
           } else {
@@ -431,7 +444,7 @@ function App() {
         backButtonListener.remove();
       }
     };
-  }, [isPinModalOpen, isNearbyModalOpen, isOnlineModalOpen, isSettingsModalOpen, isMobileChatOpen]);
+  }, [isPinModalOpen, isNearbyModalOpen, isOnlineModalOpen, isSettingsModalOpen, isMobileChatOpen, isFOPortalOpen]);
 
   const handleMarkAsRead = (channelToMark) => {
     if (pseudo) {
@@ -546,7 +559,7 @@ function App() {
     }
   }, [pendingVibeReply, currentChannel, pseudo]);
 
-  const { parseCommand } = useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage, joinedSpaces, privateChannels);
+  const { parseCommand } = useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage, joinedSpaces, privateChannels, () => setIsFOPortalOpen(true));
 
   const globalBroadcastTyping = () => {
     broadcastTyping(); // For current channel
@@ -651,6 +664,7 @@ function App() {
           onProfileClick={(nickname) => openProfileModal(nickname)}
           onReply={handleVibeReply}
           onNotificationsClick={() => setIsNotificationsModalOpen(true)}
+          verifiedChannels={verifiedChannels}
         />
         <BottomNav 
           activeTab={activeMobileTab} 
@@ -685,6 +699,7 @@ function App() {
               : followedChannels.includes(currentChannel)
           }
           onToggleFollow={handleToggleFollow}
+          verifiedChannels={verifiedChannels}
         />
         
         <ChatWindow 
@@ -776,6 +791,12 @@ function App() {
         isOpen={isJoinChannelModalOpen}
         onClose={() => setIsJoinChannelModalOpen(false)}
         onJoin={changeChannel}
+      />
+
+      <FOPortalModal 
+        isOpen={isFOPortalOpen} 
+        onClose={() => setIsFOPortalOpen(false)} 
+        onVerifiedUpdated={reloadVerifiedChannels}
       />
     </div>
   );

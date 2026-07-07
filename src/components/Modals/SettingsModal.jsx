@@ -7,7 +7,7 @@ import { fetchVibesVisibility, updateVibesVisibility } from '../../services/dbSe
 import UserAvatar from '../Shared/UserAvatar';
 
 export default function SettingsModal({ isOpen, onClose }) {
-  const { pseudo, isRegistered, allRegisteredNicks, permanentPin } = useAuth();
+  const { pseudo, isRegistered, allRegisteredNicks, allVerifiedNicks = [], permanentPin } = useAuth();
   const { 
     soundEnabled, setSoundEnabled, 
     incognitoMode, setIncognitoMode,
@@ -97,7 +97,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                     <div>
                       <div className="flex items-center">
                         <span className="font-bold text-lg text-text">{pseudo}</span>
-                        {isRegistered && <BadgeCheck size={18} className="ml-1.5 text-blue-500" />}
+                        {allVerifiedNicks && allVerifiedNicks.some(nick => nick.toLowerCase() === pseudo.toLowerCase()) && <BadgeCheck size={18} className="ml-1.5 text-blue-500" />}
                       </div>
                       <span className="text-xs text-textMuted">{isRegistered ? 'Akun Terdaftar' : 'Akun Anonim'}</span>
                     </div>

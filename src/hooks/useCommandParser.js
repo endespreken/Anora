@@ -1,7 +1,7 @@
 import { useAuth } from '../contexts/AuthContext';
-import { sendMessage, addFriendWithPin, checkNicknameExists, checkEmailExists, registerNickname, verifyNickname } from '../services/dbServices';
+import { sendMessage, addFriendWithPin, checkNicknameExists, checkEmailExists, registerNickname, verifyNickname, fetchUserRoles } from '../services/dbServices';
 
-export function useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage, joinedSpaces = [], privateChannels = []) {
+export function useCommandParser(currentChannel, changeChannel, openPinModal, addLocalMessage, joinedSpaces = [], privateChannels = [], openFOPortal) {
   const { user, pseudo, changePseudo, isRegistered, markAsRegistered, permanentPin } = useAuth();
 
   const parseCommand = async (text, replyToId = null) => {
@@ -24,6 +24,17 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
     const args = parts.slice(1).join(' ');
 
     switch (command) {
+      case 'fo':
+        if (args.toLowerCase() === 'portal') {
+          const { isGlobalFO, channelRoles } = await fetchUserRoles(pseudo);
+          if (isGlobalFO || channelRoles.some(r => r.role === 'FO' || r.role === 'SOP')) {
+            openFOPortal();
+          } else {
+            addLocalMessage("Akses ditolak: Anda tidak memiliki akses FO Portal.");
+          }
+        }
+        return true;
+
       case 'join':
         if (args) {
           changeChannel(args);
@@ -149,7 +160,8 @@ export function useCommandParser(currentChannel, changeChannel, openPinModal, ad
 2. /nick [name] [password] - Ganti nickname kamu (sertakan password jika terdaftar)
 3. /register [nick] [pass] [email] - Daftarkan nickname kamu
 4. /beacon [message] - Kirim sinyal beacon
-5. /addfriend [PIN] - Tambah teman dengan PIN (kosongkan untuk buat PIN)`;
+5. /addfriend [PIN] - Tambah teman dengan PIN (kosongkan untuk buat PIN)
+6. /FO Portal - Buka portal manajemen (Khusus Strata FO/SOP)`;
           
           addLocalMessage(helpText);
         }, 500);

@@ -711,3 +711,131 @@ export const deleteVibe = async (vibeId, pin) => {
     return false;
   }
 };
+
+// --- Strata (Roles) Functions ---
+
+export const fetchUserRoles = async (nickname) => {
+  if (!nickname) return { isGlobalFO: false, channelRoles: [] };
+  
+  const { data: globalData } = await supabase
+    .from('global_roles')
+    .select('role')
+    .ilike('nickname', nickname)
+    .maybeSingle();
+    
+  const { data: channelData } = await supabase
+    .from('channel_roles')
+    .select('channel_name, role')
+    .ilike('nickname', nickname);
+    
+  return {
+    isGlobalFO: globalData?.role === 'FO',
+    channelRoles: channelData || []
+  };
+};
+
+export const appointRole = async (channel, nickname, role) => {
+  if (!nickname || !role) return { success: false, message: "Nickname dan role wajib diisi" };
+  
+  // check if user exists
+  const { data: userExists } = await supabase
+    .from('registered_users')
+    .select('nickname')
+    .ilike('nickname', nickname)
+    .maybeSingle();
+    
+  if (!userExists) return { success: false, message: "User tidak ditemukan" };
+  
+  if (channel) {
+    const formattedChannel = channel.toLowerCase();
+    // Upsert channel
+    await supabase.from('channels').upsert({ name: formattedChannel }, { onConflict: 'name' });
+    
+    const { error } = await supabase
+      .from('channel_roles')
+      .upsert({ channel_name: formattedChannel, nickname: userExists.nickname, role: role }, { onConflict: 'channel_name,nickname,role', ignoreDuplicates: true });
+      
+    if (error) {
+       console.error("Error appointing role:", error);
+       return { success: false, message: "Gagal mengangkat role" };
+    }
+  } else if (role === 'FO') {
+    // Appoint Global FO
+    const { error } = await supabase
+      .from('global_roles')
+      .upsert({ nickname: userExists.nickname, role: role }, { onConflict: 'nickname', ignoreDuplicates: true });
+      
+    if (error) {
+       console.error("Error appointing global FO:", error);
+       return { success: false, message: "Gagal mengangkat FO global" };
+    }
+  }
+  return { success: true, message: `Berhasil mengangkat ${userExists.nickname} sebagai ${role}${channel ? ` di ${channel}` : ''}` };
+};
+
+export const setChannelVerified = async (channel, isVerified) => {
+  if (!channel) return false;
+  const formattedChannel = channel.toLowerCase();
+  // Make sure channel exists
+  await supabase.from('channels').upsert({ name: formattedChannel }, { onConflict: 'name' });
+  
+  const { error } = await supabase
+    .from('channels')
+    .update({ is_verified: isVerified })
+    .eq('name', formattedChannel);
+    
+  if (error) {
+    console.error("Error setting verified:", error);
+    return false;
+  }
+  return true;
+};
+
+export const checkIfVerified = async (channel) => {
+  if (!channel) return false;
+  const formattedChannel = channel.toLowerCase();
+  const { data, error } = await supabase
+    .from('channels')
+    .select('is_verified')
+    .eq('name', formattedChannel)
+    .maybeSingle();
+    
+  if (error || !data) return false;
+  return data.is_verified;
+};
+
+export const fetchAllVerifiedChannels = async () => {
+  const { data, error } = await supabase
+    .from('channels')
+    .select('name')
+    .eq('is_verified', true);
+    
+  if (error || !data) return [];
+  return data.map(ch => ch.name.toLowerCase());
+};
+
+export const setUserVerified = async (nickname, isVerified) => {
+  if (!nickname) return false;
+  const { error } = await supabase
+    .from('registered_users')
+    .update({ is_verified: isVerified })
+    .ilike('nickname', nickname);
+    
+  if (error) {
+    console.error("Error setting user verified:", error);
+    return false;
+  }
+  return true;
+};
+
+export const checkIfUserVerified = async (nickname) => {
+  if (!nickname) return false;
+  const { data, error } = await supabase
+    .from('registered_users')
+    .select('is_verified')
+    .ilike('nickname', nickname)
+    .maybeSingle();
+    
+  if (error || !data) return false;
+  return data.is_verified || false;
+};

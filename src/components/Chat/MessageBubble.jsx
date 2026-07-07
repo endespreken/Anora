@@ -8,7 +8,7 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
   const [showMobileReact, setShowMobileReact] = useState(false);
   const [showWebReact, setShowWebReact] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
-  const { pseudo, allRegisteredNicks = [], isRegistered } = useAuth();
+  const { pseudo, allRegisteredNicks = [], allVerifiedNicks = [], isRegistered } = useAuth();
   const { vibrationEnabled } = useSettings();
   
   const touchStart = useRef({ x: 0, y: 0, time: 0 });
@@ -163,7 +163,7 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
                 {user_pseudo}
               </button>
             )}
-            {allRegisteredNicks.some(nick => nick.toLowerCase() === user_pseudo.toLowerCase()) && (
+            {allVerifiedNicks && allVerifiedNicks.some(nick => nick.toLowerCase() === user_pseudo.toLowerCase()) && (
               <BadgeCheck size={13} className="ml-1 text-blue-500 flex-shrink-0" />
             )}
             {isMentioned && (

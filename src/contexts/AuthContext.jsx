@@ -24,6 +24,7 @@ export function AuthProvider({ children }) {
   const timerRef = React.useRef(null);
 
   const [allRegisteredNicks, setAllRegisteredNicks] = useState([]);
+  const [allVerifiedNicks, setAllVerifiedNicks] = useState([]);
   const [registeredProfiles, setRegisteredProfiles] = useState({});
   const [permanentPin, setPermanentPin] = useState(null);
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -77,9 +78,10 @@ export function AuthProvider({ children }) {
 
     // Fetch registered nicknames for blue checkmarks and avatars
     const fetchNicks = async () => {
-      const { data, error } = await supabase.from('registered_users').select('nickname, avatar_url');
+      const { data, error } = await supabase.from('registered_users').select('nickname, avatar_url, is_verified');
       if (!error && data) {
         setAllRegisteredNicks(data.map(d => d.nickname));
+        setAllVerifiedNicks(data.filter(d => d.is_verified).map(d => d.nickname));
         const profilesMap = {};
         data.forEach(d => {
           profilesMap[d.nickname.toLowerCase()] = { avatar_url: d.avatar_url };
@@ -100,11 +102,20 @@ export function AuthProvider({ children }) {
             ...prev,
             [payload.new.nickname.toLowerCase()]: { avatar_url: payload.new.avatar_url }
           }));
+          if (payload.new.is_verified) {
+            setAllVerifiedNicks(prev => !prev.includes(payload.new.nickname) ? [...prev, payload.new.nickname] : prev);
+          }
         } else if (payload.eventType === 'UPDATE' && payload.new && payload.new.nickname) {
           setRegisteredProfiles(prev => ({
             ...prev,
             [payload.new.nickname.toLowerCase()]: { avatar_url: payload.new.avatar_url }
           }));
+          setAllVerifiedNicks(prev => {
+            const has = prev.includes(payload.new.nickname);
+            if (payload.new.is_verified && !has) return [...prev, payload.new.nickname];
+            if (!payload.new.is_verified && has) return prev.filter(n => n !== payload.new.nickname);
+            return prev;
+          });
         }
       })
       .subscribe();
@@ -185,7 +196,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, trueUserId, pseudo, changePseudo, isRegistered, markAsRegistered, loading, allRegisteredNicks, registeredProfiles, permanentPin, pendingRequests, setPendingRequests }}>
+    <AuthContext.Provider value={{ user, trueUserId, pseudo, changePseudo, isRegistered, markAsRegistered, loading, allRegisteredNicks, allVerifiedNicks, registeredProfiles, permanentPin, pendingRequests, setPendingRequests }}>
       {!loading && children}
     </AuthContext.Provider>
   );

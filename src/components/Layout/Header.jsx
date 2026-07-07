@@ -8,10 +8,11 @@ export default function Header({
   currentChannel, onlineUsers = [], onMenuClick, onUserClick, 
   isMobileChatOpen, onBack, onShowMembers, onSettingsClick,
   isFollowing, onToggleFollow, onProfileClick,
-  onLoginClick, onChangeNicknameClick, onAddFriendClick, onJoinChannelClick, onCloseChat
+  onLoginClick, onChangeNicknameClick, onAddFriendClick, onJoinChannelClick, onCloseChat,
+  verifiedChannels = []
 }) {
   const { theme, toggleTheme } = useTheme();
-  const { pseudo, isRegistered } = useAuth();
+  const { pseudo, isRegistered, allVerifiedNicks = [] } = useAuth();
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -67,9 +68,14 @@ export default function Header({
               onClick={() => isPrivateChannel && onProfileClick && onProfileClick(displayChannelName)}
             >
               {displayChannelName}
-              {currentChannel === 'random' && (
-                <BadgeCheck size={18} className="ml-1.5 text-blue-500 flex-shrink-0" />
-              )}
+              {isPrivateChannel 
+                ? (allVerifiedNicks && allVerifiedNicks.some(nick => nick.toLowerCase() === displayChannelName.toLowerCase()) && (
+                  <BadgeCheck size={18} className="ml-1.5 text-blue-500 flex-shrink-0" />
+                ))
+                : ((currentChannel === 'random' || verifiedChannels.includes(currentChannel)) && (
+                  <BadgeCheck size={18} className="ml-1.5 text-blue-500 flex-shrink-0" />
+                ))
+              }
             </h1>
             {!isPrivateChannel && (
               <button 

@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { fetchUserProfile, updateUserProfile, uploadFileToR2 } from '../../services/dbServices';
 
 export default function ProfileModal({ isOpen, onClose, targetNickname, onMessageClick }) {
-  const { pseudo, isRegistered } = useAuth();
+  const { pseudo, isRegistered, allVerifiedNicks = [] } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -174,7 +174,9 @@ export default function ProfileModal({ isOpen, onClose, targetNickname, onMessag
                 <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                   {profile.nickname}
                 </span>
-                <BadgeCheck size={18} className="ml-1.5 text-blue-500 flex-shrink-0" />
+                {allVerifiedNicks && allVerifiedNicks.some(nick => nick.toLowerCase() === profile.nickname.toLowerCase()) && (
+                  <BadgeCheck size={18} className="ml-1.5 text-blue-500 flex-shrink-0" />
+                )}
               </h3>
               
               <div className="flex items-center text-sm text-textMuted mb-6 bg-secondary/30 px-3 py-1 rounded-full border border-border">

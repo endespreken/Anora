@@ -6,7 +6,7 @@ import { timeAgo } from '../../utils/timeAgo';
 import UserAvatar from '../Shared/UserAvatar';
 
 export default function VibeViewerModal({ isOpen, onClose, vibesList, initialIndex, onReply, onVibeDeleted }) {
-  const { pseudo, allRegisteredNicks, permanentPin } = useAuth();
+  const { pseudo, allVerifiedNicks = [], permanentPin } = useAuth();
   const [currentUserIndex, setCurrentUserIndex] = useState(initialIndex);
   const [currentVibeIndex, setCurrentVibeIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -151,7 +151,7 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
               <span className="font-bold text-white shadow-sm drop-shadow-md">
                 {currentUserObj.nickname}
               </span>
-              {allRegisteredNicks?.includes(currentUserObj.nickname.toLowerCase()) && (
+              {allVerifiedNicks && allVerifiedNicks.some(nick => nick.toLowerCase() === currentUserObj.nickname.toLowerCase()) && (
                 <BadgeCheck size={16} className="text-blue-400 drop-shadow-md" />
               )}
             </div>
@@ -248,7 +248,7 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
                       <li key={i} className="flex justify-between items-center bg-secondary/10 p-3 rounded-2xl border border-border">
                         <div className="flex items-center space-x-1">
                           <span className="font-bold text-text">{view.viewer_nickname}</span>
-                          {allRegisteredNicks?.includes(view.viewer_nickname.toLowerCase()) && (
+                          {allVerifiedNicks && allVerifiedNicks.some(nick => nick.toLowerCase() === view.viewer_nickname.toLowerCase()) && (
                             <BadgeCheck size={14} className="text-blue-500" />
                           )}
                         </div>

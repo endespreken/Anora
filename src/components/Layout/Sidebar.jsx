@@ -11,9 +11,9 @@ export default function Sidebar({
   unreadCounts = {}, privateChannels = [], closePrivateChannel, 
   joinedSpaces = ['random'], closeSpace, activeMobileTab = 'pms', 
   onMarkAsRead, pinnedChannels = [], onPinChat, globalTyping = {},
-  globalOnlineUsers = [], friends = [], friendNicks = [], onSettingsClick, onProfileClick, onReply, onNotificationsClick
+  globalOnlineUsers = [], friends = [], friendNicks = [], onSettingsClick, onProfileClick, onReply, onNotificationsClick, verifiedChannels = []
 }) {
-  const { user, pseudo, allRegisteredNicks = [], pendingRequests = [] } = useAuth();
+  const { user, pseudo, allRegisteredNicks = [], allVerifiedNicks = [], pendingRequests = [] } = useAuth();
   const [contextMenu, setContextMenu] = useState(null);
   const [isConnectionsModalOpen, setIsConnectionsModalOpen] = useState(false);
   const { vibrationEnabled } = useSettings();
@@ -144,7 +144,7 @@ export default function Sidebar({
                     <div className="flex flex-col items-start overflow-hidden mr-2 flex-1 text-left">
                       <div className="flex items-center w-full">
                         <span className="capitalize truncate">{channel}</span>
-                        {channel === 'random' && <BadgeCheck size={14} className="ml-1 text-blue-500 flex-shrink-0" />}
+                        {(channel === 'random' || verifiedChannels.includes(channel)) && <BadgeCheck size={14} className="ml-1 text-blue-500 flex-shrink-0" />}
                         {isPinned && <Pin size={12} className="ml-1.5 text-primary flex-shrink-0" />}
                         <div className="ml-auto flex items-center space-x-1 pl-2">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]"></span>
@@ -205,7 +205,7 @@ export default function Sidebar({
                 
                 const parts = channel.replace('@', '').split('-');
                 const targetUser = parts.find(p => p !== pseudo) || parts[0];
-                const isTargetRegistered = allRegisteredNicks.some(nick => nick.toLowerCase() === targetUser.toLowerCase());
+                const isTargetVerified = allVerifiedNicks && allVerifiedNicks.some(nick => nick.toLowerCase() === targetUser.toLowerCase());
 
                 return (
                   <li key={channel} className="group relative">
@@ -230,7 +230,7 @@ export default function Sidebar({
                       <div className="flex flex-col items-start overflow-hidden mr-2 flex-1 text-left">
                         <div className="flex items-center w-full">
                           <span className="capitalize truncate">{targetUser}</span>
-                          {isTargetRegistered && <BadgeCheck size={14} className="ml-1 text-blue-500 flex-shrink-0" />}
+                          {isTargetVerified && <BadgeCheck size={14} className="ml-1 text-blue-500 flex-shrink-0" />}
                           {isPinned && <Pin size={12} className="ml-1.5 text-primary flex-shrink-0" />}
                         </div>
                         {isTyping && <span className="text-[10px] text-green-500 font-medium animate-pulse mt-0.5">Typing...</span>}
