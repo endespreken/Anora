@@ -4,6 +4,15 @@ import emoji from 'react-easy-emoji';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import LinkPreview from './LinkPreview';
+import { QuizCard, WikiCard, CryptoCard, KursCard, WeatherCard, MemeCard, TranslateCard } from './ChatCards';
+
+const safeJsonParse = (str) => {
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    return null;
+  }
+};
 
 export default function MessageBubble({ message, isOwn, onReply, onReact, allMessages = [], onUserClick, onProfileClick, isTargetOnline }) {
   const [showMobileReact, setShowMobileReact] = useState(false);
@@ -20,9 +29,27 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
   const time = new Date(created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   if (is_system_msg) {
+    if (content.startsWith('[QUIZ]:') && safeJsonParse(content.substring(7))) {
+      return (
+        <div className="flex justify-center my-6 animate-fade-in w-full px-4">
+          <QuizCard data={safeJsonParse(content.substring(7))} currentChannel={message.channel_name} pseudo={pseudo} />
+        </div>
+      );
+    }
+    
+    if (content.startsWith('[QUIZ_WIN]:')) {
+      return (
+        <div className="flex justify-center my-4 animate-fade-in px-4">
+          <div className="text-sm font-semibold text-green-400 bg-green-500/10 border border-green-500/30 px-6 py-2.5 rounded-full shadow-[0_0_15px_rgba(74,222,128,0.2)] text-center">
+            {emoji(content.substring(11))}
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex justify-center my-6 animate-fade-in">
-        <span className="text-xs font-medium text-textMuted bg-secondary/30 backdrop-blur-sm border border-border px-4 py-1.5 rounded-full shadow-sm">
+      <div className="flex justify-center my-6 animate-fade-in px-4 text-center">
+        <span className="text-xs font-medium text-textMuted bg-secondary/30 backdrop-blur-sm border border-border px-4 py-1.5 rounded-full shadow-sm leading-relaxed inline-block">
           {emoji(content)}
         </span>
       </div>
@@ -49,6 +76,20 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
 
   const urlsInMessage = extractUrls(content);
   const firstUrl = urlsInMessage.length > 0 ? urlsInMessage[0] : null;
+
+  const getYouTubeId = (url) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const getSpotifyId = (url) => {
+    const regExp = /spotify\.com\/(track|album|playlist|episode|show)\/([a-zA-Z0-9]+)/;
+    const match = url.match(regExp);
+    return match ? { type: match[1], id: match[2] } : null;
+  };
+
+
 
   const renderMessageContent = (text) => {
     if (!text) return null;
@@ -266,13 +307,57 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
               <div className="flex flex-col pr-4">
                 <div className="flex items-start">
                   {isBeacon && <Radio size={16} className="text-accent mr-2 mt-0.5 shrink-0" />}
-                  <span className={`leading-relaxed whitespace-pre-wrap break-words ${isBeacon ? 'font-medium' : ''}`}>
-                    {isBeacon ? renderMessageContent(content.replace('[BEACON SIGNAL]:', '').trim()) : renderMessageContent(content)}
-                  </span>
+                  {content.startsWith('[QUIZ]:') && safeJsonParse(content.substring(7)) ? (
+                    <QuizCard data={safeJsonParse(content.substring(7))} currentChannel={message.channel_name} pseudo={pseudo} />
+                  ) : content.startsWith('[WIKI]:') && safeJsonParse(content.substring(7)) ? (
+                    <WikiCard data={safeJsonParse(content.substring(7))} />
+                  ) : content.startsWith('[CRYPTO]:') && safeJsonParse(content.substring(9)) ? (
+                    <CryptoCard data={safeJsonParse(content.substring(9))} />
+                  ) : content.startsWith('[KURS]:') && safeJsonParse(content.substring(7)) ? (
+                    <KursCard data={safeJsonParse(content.substring(7))} />
+                  ) : content.startsWith('[WEATHER]:') && safeJsonParse(content.substring(10)) ? (
+                    <WeatherCard data={safeJsonParse(content.substring(10))} />
+                  ) : content.startsWith('[MEME]:') && safeJsonParse(content.substring(7)) ? (
+                    <MemeCard data={safeJsonParse(content.substring(7))} />
+                  ) : content.startsWith('[TRANSLATE]:') && safeJsonParse(content.substring(12)) ? (
+                    <TranslateCard data={safeJsonParse(content.substring(12))} />
+                  ) : content.startsWith('[QUIZ_WIN]:') ? (
+                    <span className="leading-relaxed whitespace-pre-wrap break-words font-medium text-green-400">
+                      {renderMessageContent(content.substring(11))}
+                    </span>
+                  ) : (
+                    <span className={`leading-relaxed whitespace-pre-wrap break-words ${isBeacon ? 'font-medium' : ''}`}>
+                      {isBeacon ? renderMessageContent(content.replace('[BEACON SIGNAL]:', '').trim()) : renderMessageContent(content)}
+                    </span>
+                  )}
                 </div>
-                {firstUrl && (
-                  <div className="mt-1" onClick={(e) => e.stopPropagation()}>
-                    <LinkPreview url={firstUrl} />
+                {firstUrl && !content.startsWith('[QUIZ]') && !content.startsWith('[WIKI]') && !content.startsWith('[CRYPTO]') && !content.startsWith('[KURS]') && !content.startsWith('[WEATHER]') && !content.startsWith('[MEME]') && !content.startsWith('[TRANSLATE]') && (
+                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                    {getYouTubeId(firstUrl) ? (
+                      <div className="relative w-full sm:w-80 rounded-xl overflow-hidden bg-black aspect-video">
+                        <iframe
+                          className="absolute top-0 left-0 w-full h-full"
+                          src={`https://www.youtube.com/embed/${getYouTubeId(firstUrl)}`}
+                          title="YouTube video player"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+                    ) : getSpotifyId(firstUrl) ? (
+                      <iframe 
+                        className="rounded-xl w-full sm:w-80" 
+                        src={`https://open.spotify.com/embed/${getSpotifyId(firstUrl).type}/${getSpotifyId(firstUrl).id}?utm_source=generator&theme=0`} 
+                        width="100%" 
+                        height={getSpotifyId(firstUrl).type === 'track' ? "152" : "352"} 
+                        frameBorder="0" 
+                        allowFullScreen="" 
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                        loading="lazy"
+                      ></iframe>
+                    ) : (
+                      <LinkPreview url={firstUrl} />
+                    )}
                   </div>
                 )}
               </div>
