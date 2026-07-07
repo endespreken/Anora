@@ -196,7 +196,15 @@ export default function Sidebar({
           )}
           {privateChannels.length > 0 && (
             <ul className="space-y-1">
-              {sortedPMs.map(channel => {
+              {sortedPMs.filter((channel, index, self) => {
+                const parts = channel.replace('@', '').split('-');
+                const targetUser = parts.find(p => p !== pseudo) || parts[0];
+                return index === self.findIndex(c => {
+                  const cParts = c.replace('@', '').split('-');
+                  const cTarget = cParts.find(p => p !== pseudo) || cParts[0];
+                  return cTarget.toLowerCase() === targetUser.toLowerCase();
+                });
+              }).map(channel => {
                 const isActive = currentChannel === channel;
                 const unreadCount = unreadCounts[channel] || 0;
                 const isUnread = unreadCount > 0;

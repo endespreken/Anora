@@ -29,6 +29,7 @@ import { useSettings } from './contexts/SettingsContext';
 import Home from './components/Home/Home';
 import { App as CapApp } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 
 function App() {
   const [currentChannel, setCurrentChannel] = useState('random');
@@ -362,25 +363,27 @@ function App() {
           const isCommandResponse = commandPrefixes.some(prefix => newMsg.content.startsWith(prefix)) || newMsg.user_pseudo === 'Anora' || newMsg.user_pseudo === 'SYSTEM';
 
           const showNotification = (title, body) => {
-            // Native Mobile (Capacitor)
-            LocalNotifications.schedule({
-              notifications: [{
-                title,
-                body,
-                id: new Date().getTime() % 1000000,
-              }]
-            }).catch(e => console.warn(e));
-
-            // Web Browser (WhatsApp Web style)
-            if ('Notification' in window && Notification.permission === 'granted') {
-              const notification = new Notification(title, { 
-                body, 
-                icon: 'https://snixuzaslqdnbduqmazs.supabase.co/storage/v1/object/public/Asset/Logo%20Apps%20Mobile.png' 
-              });
-              notification.onclick = () => {
-                window.focus();
-                notification.close();
-              };
+            if (Capacitor.isNativePlatform()) {
+              // Native Mobile (Capacitor)
+              LocalNotifications.schedule({
+                notifications: [{
+                  title,
+                  body,
+                  id: new Date().getTime() % 1000000,
+                }]
+              }).catch(e => console.warn(e));
+            } else {
+              // Web Browser (WhatsApp Web style)
+              if ('Notification' in window && Notification.permission === 'granted') {
+                const notification = new Notification(title, { 
+                  body, 
+                  icon: 'https://snixuzaslqdnbduqmazs.supabase.co/storage/v1/object/public/Asset/Logo%20Apps%20Mobile.png' 
+                });
+                notification.onclick = () => {
+                  window.focus();
+                  notification.close();
+                };
+              }
             }
           };
 
