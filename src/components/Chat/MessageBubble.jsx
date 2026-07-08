@@ -378,7 +378,7 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
                     </span>
                   )}
                 </div>
-                {firstUrl && !content.startsWith('[QUIZ]') && !content.startsWith('[WIKI]') && !content.startsWith('[CRYPTO]') && !content.startsWith('[KURS]') && !content.startsWith('[WEATHER]') && !content.startsWith('[MEME]') && !content.startsWith('[TRANSLATE]') && !content.startsWith('[TEBAKKATA]') && (
+                {firstUrl && !content.startsWith('[QUIZ]') && !content.startsWith('[WIKI]') && !content.startsWith('[CRYPTO]') && !content.startsWith('[KURS]') && !content.startsWith('[WEATHER]') && !content.startsWith('[MEME]') && !content.startsWith('[TRANSLATE]') && !content.startsWith('[TEBAKKATA]') && !content.startsWith('[VIBE_REPLY]:') && (
                   <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                     {getYouTubeId(firstUrl) ? (
                       <div className="relative w-full sm:w-80 rounded-xl overflow-hidden bg-black aspect-video">
