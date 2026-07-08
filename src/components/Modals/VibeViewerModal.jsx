@@ -92,7 +92,16 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
 
   const handleSendReply = (text = replyText) => {
     if (!text.trim()) return;
-    const msg = `[Membalas Vibe: "${parsedContent}"]\n${text.trim()}`;
+    
+    // Format payload for rich Vibe reply rendering
+    const vibeSnippet = {
+      bg_color: currentVibe.bg_color,
+      content: parsedContent,
+      caption: vibeCaption
+    };
+    
+    const msg = `[VIBE_REPLY]:${JSON.stringify(vibeSnippet)}\n${text.trim()}`;
+    
     if (onReply) {
       onReply(currentUserObj.nickname, msg);
     }

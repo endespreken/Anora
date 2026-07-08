@@ -4,7 +4,7 @@ import emoji from 'react-easy-emoji';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import LinkPreview from './LinkPreview';
-import { QuizCard, WikiCard, CryptoCard, KursCard, WeatherCard, MemeCard, TranslateCard, TebakKataCard } from './ChatCards';
+import { QuizCard, WikiCard, CryptoCard, KursCard, WeatherCard, MemeCard, TranslateCard, TebakKataCard, VibeReplyCard } from './ChatCards';
 
 const safeJsonParse = (str) => {
   try {
@@ -351,6 +351,23 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
                     <MemeCard data={safeJsonParse(content.substring(7))} />
                   ) : content.startsWith('[TRANSLATE]:') && safeJsonParse(content.substring(12)) ? (
                     <TranslateCard data={safeJsonParse(content.substring(12))} />
+                  ) : content.startsWith('[VIBE_REPLY]:') && content.includes('\n') ? (
+                    (() => {
+                      const firstNewline = content.indexOf('\n');
+                      const jsonStr = content.substring(13, firstNewline);
+                      const replyText = content.substring(firstNewline + 1);
+                      const data = safeJsonParse(jsonStr);
+                      return data ? (
+                        <div className="flex flex-col">
+                          <VibeReplyCard data={data} isOwn={isOwn} />
+                          <div className="whitespace-pre-wrap leading-relaxed break-words word-break-all text-[15px] mt-2">
+                            {renderMessageContent(replyText)}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="leading-relaxed whitespace-pre-wrap break-words">{renderMessageContent(content)}</span>
+                      );
+                    })()
                   ) : content.startsWith('[QUIZ_WIN]:') ? (
                     <span className="leading-relaxed whitespace-pre-wrap break-words font-medium text-green-400">
                       {renderMessageContent(content.substring(11))}

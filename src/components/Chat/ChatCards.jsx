@@ -280,3 +280,39 @@ export const TebakKataCard = ({ data, currentChannel, pseudo }) => {
     </div>
   );
 };
+
+export const VibeReplyCard = ({ data, isOwn }) => {
+  const isImage = (data.bg_color || '').startsWith('img:');
+  const bgUrl = isImage ? data.bg_color.substring(4).replace('pub-f591f14e39f84bdc80676d77036d98b2.r2.dev', 'media.anorachat.com') : '';
+  
+  return (
+    <div className={`relative rounded-xl overflow-hidden mb-1 border ${isOwn ? 'border-white/20' : 'border-border'} shadow-sm w-48 h-28 flex flex-col justify-end group select-none`}>
+      <div 
+        className={`absolute inset-0 ${!isImage ? data.bg_color || 'bg-black' : 'bg-black'}`}
+        style={isImage ? { backgroundImage: `url(${bgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+      >
+        {isImage && <div className="absolute inset-0 bg-black/20"></div>}
+      </div>
+      
+      {data.content && (
+        <div className="relative z-10 w-full p-2 h-full flex items-center justify-center text-center">
+          <p className={`text-white font-bold px-1 ${data.content.length > 20 ? 'text-[10px]' : 'text-xs'} break-words whitespace-pre-wrap max-h-full overflow-hidden line-clamp-3 drop-shadow-md`}>
+            {data.content}
+          </p>
+        </div>
+      )}
+      
+      {data.caption && (
+        <div className="relative z-10 w-full bg-black/50 backdrop-blur-sm p-1.5 px-2">
+          <p className="text-white/90 text-[10px] font-medium truncate">
+            {data.caption}
+          </p>
+        </div>
+      )}
+      
+      <div className="absolute top-1.5 left-1.5 bg-black/40 backdrop-blur-md px-1.5 py-0.5 rounded-md text-[9px] text-white/90 uppercase tracking-wider font-bold">
+        Vibe
+      </div>
+    </div>
+  );
+};
