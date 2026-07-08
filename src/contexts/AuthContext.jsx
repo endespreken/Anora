@@ -169,14 +169,13 @@ export function AuthProvider({ children }) {
   const changePseudo = (newPseudo, registered = false) => {
     const oldPseudo = pseudo;
     if (oldPseudo && oldPseudo !== newPseudo) {
-      const savedSpaces = localStorage.getItem(`anora_spaces_${oldPseudo}`);
-      if (savedSpaces) localStorage.setItem(`anora_spaces_${newPseudo}`, savedSpaces);
-      
-      const savedPMs = localStorage.getItem(`anora_pm_${oldPseudo}`);
-      if (savedPMs) localStorage.setItem(`anora_pm_${newPseudo}`, savedPMs);
-      
-      const savedPinned = localStorage.getItem(`anora_pinned_${oldPseudo}`);
-      if (savedPinned) localStorage.setItem(`anora_pinned_${newPseudo}`, savedPinned);
+      // Clear all local storage keys associated with the old nickname
+      // This ensures a clean state and prevents crossing PM channels from the old nickname
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes(`_${oldPseudo}`)) {
+          localStorage.removeItem(key);
+        }
+      });
     }
 
     setPseudo(newPseudo);
