@@ -245,8 +245,7 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-0 sm:p-8 pointer-events-none z-0">
+      <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-0 sm:p-8 pointer-events-none z-10">
         <div 
           className={`w-full aspect-[9/16] max-h-full sm:max-w-sm rounded-none sm:rounded-3xl mx-auto flex items-center justify-center relative overflow-hidden ${!(currentVibe.bg_color || '').startsWith('img:') ? currentVibe.bg_color : 'bg-black'}`}
           style={(currentVibe.bg_color || '').startsWith('img:') ? { backgroundImage: `url(${(currentVibe.bg_color || '').substring(4).replace('pub-f591f14e39f84bdc80676d77036d98b2.r2.dev', 'media.anorachat.com')})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' } : {}}

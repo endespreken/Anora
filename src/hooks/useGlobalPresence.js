@@ -10,7 +10,8 @@ export function useGlobalPresence(user, pseudo, joinedSpaces, privateChannels) {
   const locationRef = useRef({ lat: null, lng: null });
   const { incognitoMode } = useSettings();
 
-  const handleRequestLocation = async () => {
+  const handleRequestLocation = async (e) => {
+    const isManual = !!e; // if called from onClick, e is the event object
     try {
       const currentPermissions = await Geolocation.checkPermissions();
       let hasPermission = currentPermissions.location === 'granted';
@@ -39,10 +40,16 @@ export function useGlobalPresence(user, pseudo, joinedSpaces, privateChannels) {
         }
       } else {
         setLocationPermissionDenied(true);
+        if (isManual) {
+          window.alert("Izin lokasi telah diblokir secara permanen atau tidak didukung di perangkat/browser Anda (contoh: mode incognito). Mohon buka Pengaturan Perangkat Anda dan izinkan akses lokasi untuk Anora agar Anda dapat melanjutkan.");
+        }
       }
     } catch (error) {
       console.log('Geolocation error or denied:', error);
       setLocationPermissionDenied(true);
+      if (isManual) {
+        window.alert("Izin lokasi telah diblokir secara permanen atau tidak didukung di perangkat/browser Anda (contoh: mode incognito). Mohon buka Pengaturan Perangkat Anda dan izinkan akses lokasi untuk Anora agar Anda dapat melanjutkan.");
+      }
     }
   };
 

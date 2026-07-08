@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { calculateDistance, formatDistance } from '../../utils/geo';
 import UserAvatar from '../Shared/UserAvatar';
 
-export default function NearbyUsersModal({ isOpen, onClose, onlineUsers, onUserClick }) {
+export default function NearbyUsersModal({ isOpen, onClose, onlineUsers, onUserClick, onRequestLocation }) {
   const { user } = useAuth();
 
   const nearbyUsers = useMemo(() => {
@@ -63,10 +63,21 @@ export default function NearbyUsersModal({ isOpen, onClose, onlineUsers, onUserC
 
         <div className="px-8 pb-8 overflow-y-auto">
           {!locationEnabled ? (
-            <div className="bg-secondary/20 border border-border rounded-2xl p-6 text-center">
-              <p className="text-sm text-textMuted">
-                Please allow location access in your browser to see nearby users.
+            <div className="bg-secondary/20 border border-border rounded-2xl p-6 text-center flex flex-col items-center">
+              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-4">
+                <MapPin size={32} className="text-red-500" />
+              </div>
+              <h3 className="text-lg font-bold text-text mb-2">Akses Lokasi Diperlukan</h3>
+              <p className="text-sm text-textMuted mb-6 leading-relaxed">
+                Untuk menemukan pengguna Anora di sekitar Anda, Anda harus mengaktifkan dan mengizinkan akses lokasi.
               </p>
+              <button 
+                onClick={(e) => onRequestLocation(e)}
+                className="w-full sm:w-auto bg-primary hover:bg-primaryHover text-white font-bold py-3 px-6 rounded-xl transition-all active:scale-95 flex items-center justify-center space-x-2"
+              >
+                <MapPin size={18} />
+                <span>Aktifkan Lokasi</span>
+              </button>
             </div>
           ) : nearbyUsers.length === 0 ? (
             <div className="bg-secondary/20 border border-border rounded-2xl p-6 text-center">

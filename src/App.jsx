@@ -16,7 +16,6 @@ import LoginModal from './components/Modals/LoginModal';
 import ChangeNicknameModal from './components/Modals/ChangeNicknameModal';
 import JoinChannelModal from './components/Modals/JoinChannelModal';
 import FOPortalModal from './components/Modals/FOPortalModal';
-import LocationRequiredModal from './components/Modals/LocationRequiredModal';
 import { useChatRealtime } from './hooks/useChatRealtime';
 import { useCommandParser } from './hooks/useCommandParser';
 import { useAuth } from './contexts/AuthContext';
@@ -228,7 +227,7 @@ function App() {
   const { messages, typingUsers, loading, setMessages, broadcastTyping, hasMore, loadMoreMessages, isLoadingMore } = useChatRealtime(currentChannel, user, pseudo);
 
   // Global Presence
-  const { globalOnlineUsers, locationPermissionDenied, handleRequestLocation } = useGlobalPresence(user, pseudo, joinedSpaces, privateChannels);
+  const { globalOnlineUsers, handleRequestLocation } = useGlobalPresence(user, pseudo, joinedSpaces, privateChannels);
   
   // Filter online users for current room
   const onlineUsers = globalOnlineUsers.filter(u => {
@@ -934,6 +933,7 @@ function App() {
         onClose={closeNearbyModal}
         onlineUsers={globalOnlineUsers}
         onUserClick={startPrivateMessage}
+        onRequestLocation={handleRequestLocation}
       />
 
         <FollowPinModal
@@ -997,11 +997,6 @@ function App() {
         isOpen={isFOPortalOpen} 
         onClose={() => setIsFOPortalOpen(false)} 
         onVerifiedUpdated={reloadVerifiedChannels}
-      />
-
-      <LocationRequiredModal
-        isOpen={locationPermissionDenied}
-        onRequestPermission={handleRequestLocation}
       />
 
       <NativeAlert 
