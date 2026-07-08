@@ -103,7 +103,7 @@ export default function Sidebar({
       </div>
       
       <div className={`md:block ${activeMobileTab === 'pms' ? 'block' : 'hidden'}`}>
-        <VibesBar friendNicks={friendNicks} onReply={onReply} />
+        <VibesBar friendNicks={friendNicks} onReply={onReply} onProfileClick={onProfileClick} />
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 md:space-y-8 pb-20 md:pb-4">

@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
-import { X, Send, Image as ImageIcon, Type, Smile } from 'lucide-react';
+import { X, Send, Image as ImageIcon, Type, Smile, BarChart2 } from 'lucide-react';
 import EmojiPicker, { EmojiStyle } from 'emoji-picker-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadVibe, uploadFileToR2 } from '../../services/dbServices';
 import { compressImage } from '../../utils/image';
+
+export const VIBE_FONTS = [
+  { id: 'classic', name: 'Klasik', class: 'font-sans' },
+  { id: 'typewriter', name: 'Mesin Tik', class: 'font-mono tracking-widest' },
+  { id: 'neon', name: 'Neon', class: 'font-sans drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] text-white' },
+  { id: 'serif', name: 'Serif', class: 'font-serif italic' }
+];
 
 const BG_COLORS = [
   'bg-gradient-to-br from-primary to-accent',
@@ -23,9 +30,13 @@ export default function VibeUploadModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [fontIndex, setFontIndex] = useState(0);
+  const [showPoll, setShowPoll] = useState(false);
+  const [pollData, setPollData] = useState({ question: '', opt1: '', opt2: '' });
 
   const containerRef = React.useRef(null);
   const [textPos, setTextPos] = useState({ x: 50, y: 50 });
+  const [hasMovedText, setHasMovedText] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showTextOverlay, setShowTextOverlay] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -54,6 +65,9 @@ export default function VibeUploadModal({ isOpen, onClose }) {
       setIsDragging(false);
       setShowTextOverlay(false);
       setShowEmoji(false);
+      setFontIndex(0);
+      setShowPoll(false);
+      setPollData({ question: '', opt1: '', opt2: '' });
     }
   }, [isOpen]);
 
@@ -91,13 +105,12 @@ export default function VibeUploadModal({ isOpen, onClose }) {
   };
 
   const handlePointerDown = (e) => {
-    if (!imagePreview) return;
     setIsDragging(true);
     e.target.setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e) => {
-    if (!isDragging || !containerRef.current || !imagePreview) return;
+    if (!isDragging || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     let x = ((e.clientX - rect.left) / rect.width) * 100;
     let y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -106,10 +119,10 @@ export default function VibeUploadModal({ isOpen, onClose }) {
     y = Math.max(0, Math.min(100, y));
 
     setTextPos({ x, y });
+    if (!hasMovedText) setHasMovedText(true);
   };
 
   const handlePointerUp = (e) => {
-    if (!imagePreview) return;
     setIsDragging(false);
     e.target.releasePointerCapture(e.pointerId);
   };
@@ -141,19 +154,44 @@ export default function VibeUploadModal({ isOpen, onClose }) {
     }
 
     let finalContent = content.trim() || ' ';
-    if (imageFile) {
-      // Encode coordinates and caption for image vibes
-      // If text overlay is disabled, we don't save the text overlay
-      finalContent = JSON.stringify({
-        text: showTextOverlay ? finalContent : ' ',
-        pos: textPos,
-        caption: caption.trim()
-      });
+    const hasPoll = showPoll && pollData.question.trim() && pollData.opt1.trim() && pollData.opt2.trim();
+    const effectivePos = hasMovedText ? textPos : (hasPoll ? { x: 50, y: 35 } : { x: 50, y: 50 });
+    
+    const payload = {
+      text: (imageFile && !showTextOverlay) ? ' ' : finalContent,
+      font: fontIndex,
+      poll: hasPoll ? pollData : undefined,
+      caption: caption.trim() || undefined,
+      pos: effectivePos
+    };
+    
+    if (hasPoll) {
+      payload.poll = {
+        question: pollData.question.trim(),
+        options: [pollData.opt1.trim(), pollData.opt2.trim()]
+      };
     }
+    
+    finalContent = JSON.stringify(payload);
 
     const success = await uploadVibe(pseudo, finalContent, finalBgColor);
     setLoading(false);
     if (success) {
+      // Parse mentions and send notifications
+      const mentionRegex = /@([a-zA-Z0-9_.-]+)/g;
+      const combinedText = content + " " + caption;
+      const mentions = [...new Set([...(combinedText.match(mentionRegex) || [])].map(m => m.substring(1)))];
+      
+      if (mentions.length > 0) {
+        import('../../services/dbServices').then(({ sendMessage }) => {
+          mentions.forEach(async (mentioned) => {
+            if (mentioned.toLowerCase() !== pseudo.toLowerCase()) {
+              const pmChannel = `@${[mentioned, 'Anora 🤖'].sort().join('-')}`;
+              await sendMessage(pmChannel, 'Anora 🤖', `Halo ${mentioned}! Kamu baru saja di-mention di Vibe milik **${pseudo}**. Segera cek Vibes mereka sebelum hilang!`, false);
+            }
+          });
+        });
+      }
       onClose();
     } else {
       alert("Gagal mengunggah Vibe. Silakan coba lagi.");
@@ -204,15 +242,18 @@ export default function VibeUploadModal({ isOpen, onClose }) {
             <div className="absolute inset-0 bg-black/10 rounded-3xl backdrop-blur-[1px]"></div>
           )}
           
-          {(!imagePreview || showTextOverlay) && (
+          {(!imagePreview || showTextOverlay) && (() => {
+            const hasPoll = showPoll && pollData.question.trim() && pollData.opt1.trim() && pollData.opt2.trim();
+            const effectivePos = hasMovedText ? textPos : (hasPoll ? { x: 50, y: 35 } : { x: 50, y: 50 });
+            return (
             <div 
-              className={`w-full px-8 relative z-10 ${imagePreview ? 'absolute cursor-move' : ''}`}
-              style={imagePreview ? {
-                top: `${textPos.y}%`,
-                left: `${textPos.x}%`,
+              className="w-full px-8 absolute z-10 cursor-move"
+              style={{
+                top: `${effectivePos.y}%`,
+                left: `${effectivePos.x}%`,
                 transform: 'translate(-50%, -50%)',
                 touchAction: 'none' // Prevent scrolling while dragging on mobile
-              } : {}}
+              }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
@@ -224,15 +265,45 @@ export default function VibeUploadModal({ isOpen, onClose }) {
                 onChange={(e) => setContent(e.target.value)}
                 placeholder={imagePreview ? "Ketik sesuatu..." : "What's your vibe today?"}
                 maxLength={150}
-                className={`w-full bg-transparent text-white text-3xl font-bold text-center resize-none outline-none placeholder:text-white/50 pointer-events-auto ${imagePreview ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]' : ''}`}
+                className={`w-full bg-transparent text-white text-3xl font-bold text-center resize-none outline-none placeholder:text-white/50 pointer-events-auto ${VIBE_FONTS[fontIndex].class} ${imagePreview ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]' : ''}`}
                 rows={5}
               />
             </div>
-          )}
+            );
+          })()}
           
           {(!imagePreview || showTextOverlay) && (
             <div className="absolute bottom-4 right-6 text-white/60 text-sm font-medium z-20 pointer-events-none">
               {content.length}/150
+            </div>
+          )}
+          
+          {/* Poll Overlay */}
+          {showPoll && (!imagePreview || showTextOverlay) && (
+            <div className="absolute w-[80%] left-1/2 top-[70%] -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-auto bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 shadow-xl">
+              <input 
+                type="text" 
+                placeholder="Tanyakan sesuatu..."
+                value={pollData.question}
+                onChange={(e) => setPollData({...pollData, question: e.target.value})}
+                className="w-full bg-transparent text-white text-center font-bold outline-none placeholder:text-white/70 mb-3 border-b border-white/20 pb-2"
+              />
+              <div className="space-y-2">
+                <input 
+                  type="text" 
+                  placeholder="Opsi 1"
+                  value={pollData.opt1}
+                  onChange={(e) => setPollData({...pollData, opt1: e.target.value})}
+                  className="w-full bg-white/20 text-white text-center rounded-xl py-2 outline-none placeholder:text-white/60 focus:bg-white/30 transition-all"
+                />
+                <input 
+                  type="text" 
+                  placeholder="Opsi 2"
+                  value={pollData.opt2}
+                  onChange={(e) => setPollData({...pollData, opt2: e.target.value})}
+                  className="w-full bg-white/20 text-white text-center rounded-xl py-2 outline-none placeholder:text-white/60 focus:bg-white/30 transition-all"
+                />
+              </div>
             </div>
           )}
         </div>
@@ -285,10 +356,24 @@ export default function VibeUploadModal({ isOpen, onClose }) {
       {/* Color Picker & Image Upload */}
       <div className="mt-4 sm:mt-8 w-full">
         <div className="flex items-center justify-start sm:justify-center space-x-3 overflow-x-auto py-4 px-2 no-scrollbar w-full">
-          <label className="w-10 h-10 rounded-full bg-secondary flex flex-shrink-0 items-center justify-center cursor-pointer hover:bg-secondary/80 transition-colors text-textMuted hover:text-text shadow-sm border border-border ml-2 sm:ml-0">
+          <label className="w-10 h-10 rounded-full bg-secondary flex flex-shrink-0 items-center justify-center cursor-pointer hover:bg-secondary/80 transition-colors text-textMuted hover:text-text shadow-sm border border-border ml-2 sm:ml-0" title="Gambar">
             <input type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
             <ImageIcon size={20} />
           </label>
+          <button 
+            onClick={() => setFontIndex((prev) => (prev + 1) % VIBE_FONTS.length)} 
+            className="w-10 h-10 rounded-full bg-secondary flex flex-shrink-0 items-center justify-center cursor-pointer hover:bg-secondary/80 transition-colors text-textMuted hover:text-text shadow-sm border border-border font-bold font-serif"
+            title={`Font: ${VIBE_FONTS[fontIndex].name}`}
+          >
+            Aa
+          </button>
+          <button 
+            onClick={() => setShowPoll(!showPoll)} 
+            className={`w-10 h-10 rounded-full flex flex-shrink-0 items-center justify-center cursor-pointer transition-colors shadow-sm border ${showPoll ? 'bg-primary text-white border-primary' : 'bg-secondary text-textMuted hover:bg-secondary/80 hover:text-text border-border'}`}
+            title="Tambah Polling"
+          >
+            <BarChart2 size={20} />
+          </button>
           
           <div className="h-6 w-px bg-border mx-1 flex-shrink-0"></div>
 

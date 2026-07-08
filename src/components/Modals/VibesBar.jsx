@@ -7,7 +7,7 @@ import VibeUploadModal from './VibeUploadModal';
 import { fetchActiveVibes } from '../../services/dbServices';
 import UserAvatar from '../Shared/UserAvatar';
 
-export default function VibesBar({ friendNicks, onReply }) {
+export default function VibesBar({ friendNicks, onReply, onProfileClick }) {
   const { user, isRegistered, pseudo } = useAuth();
   const [vibesList, setVibesList] = useState([]);
   const [selectedVibeIndex, setSelectedVibeIndex] = useState(null);
@@ -182,6 +182,7 @@ export default function VibesBar({ friendNicks, onReply }) {
           initialIndex={selectedVibeIndex}
           onReply={onReply}
           onVibeDeleted={loadVibes}
+          onProfileClick={onProfileClick}
         />,
         document.body
       )}
