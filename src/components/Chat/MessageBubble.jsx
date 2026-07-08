@@ -5,6 +5,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import LinkPreview from './LinkPreview';
 import { QuizCard, WikiCard, CryptoCard, KursCard, WeatherCard, MemeCard, TranslateCard, TebakKataCard, VibeReplyCard } from './ChatCards';
+import { createPortal } from 'react-dom';
+import VibeViewerModal from '../Modals/VibeViewerModal';
 
 const safeJsonParse = (str) => {
   try {
@@ -18,6 +20,8 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
   const [showMobileReact, setShowMobileReact] = useState(false);
   const [showWebReact, setShowWebReact] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
+  const [showVibeSnapshot, setShowVibeSnapshot] = useState(false);
+  const [vibeSnapshotData, setVibeSnapshotData] = useState(null);
   const { pseudo, allRegisteredNicks = [], allVerifiedNicks = [], isRegistered } = useAuth();
   const { vibrationEnabled } = useSettings();
   
@@ -359,7 +363,25 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
                       const data = safeJsonParse(jsonStr);
                       return data ? (
                         <div className="flex flex-col">
-                          <VibeReplyCard data={data} isOwn={isOwn} />
+                          <div 
+                            className="cursor-pointer hover:opacity-90 active:scale-95 transition-all"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setVibeSnapshotData({
+                                nickname: "Vibe Snapshot",
+                                vibes: [{
+                                  id: data.vibe_id || "snapshot",
+                                  bg_color: data.bg_color,
+                                  content: data.content,
+                                  caption: data.caption,
+                                  created_at: created_at
+                                }]
+                              });
+                              setShowVibeSnapshot(true);
+                            }}
+                          >
+                            <VibeReplyCard data={data} isOwn={isOwn} />
+                          </div>
                           <div className="whitespace-pre-wrap leading-relaxed break-words word-break-all text-[15px] mt-2">
                             {renderMessageContent(replyText)}
                           </div>
@@ -448,6 +470,17 @@ export default function MessageBubble({ message, isOwn, onReply, onReact, allMes
           </div>
         )}
       </div>
+
+      {showVibeSnapshot && vibeSnapshotData && createPortal(
+        <VibeViewerModal
+          isOpen={showVibeSnapshot}
+          onClose={() => setShowVibeSnapshot(false)}
+          vibesList={[vibeSnapshotData]}
+          initialIndex={0}
+          onProfileClick={onProfileClick}
+        />,
+        document.body
+      )}
     </div>
   );
 }

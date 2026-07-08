@@ -132,8 +132,10 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
     }
   };
 
+  const isMyVibe = pseudo && currentUserObj.nickname.toLowerCase() === pseudo.toLowerCase();
+
   const handleVote = async (optIndex) => {
-    if (pollVotes.userVote !== null || !pseudo) return; // already voted
+    if (pollVotes.userVote !== null || !pseudo || isMyVibe) return; // already voted or is owner
     
     // Optimistic update
     setPollVotes(prev => ({
@@ -164,8 +166,6 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
     }
     onClose();
   };
-
-  const isMyVibe = pseudo && currentUserObj.nickname.toLowerCase() === pseudo.toLowerCase();
 
   const handleDeleteClick = async (e) => {
     if (e) e.stopPropagation();
@@ -299,15 +299,16 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
                   const percent = pollVotes.total > 0 ? Math.round((optVotes / pollVotes.total) * 100) : 0;
                   const isVoted = pollVotes.userVote === optIndex;
                   const hasVoted = pollVotes.userVote !== null;
+                  const canVote = !hasVoted && !isMyVibe;
                   
                   return (
                     <button
                       key={optIndex}
                       onClick={(e) => { e.stopPropagation(); handleVote(optIndex); }}
-                      disabled={hasVoted}
-                      className={`relative w-full overflow-hidden rounded-2xl p-3 text-white font-bold transition-all border ${isVoted ? 'border-primary bg-primary/30' : 'border-white/20 bg-white/10 hover:bg-white/20'} ${hasVoted ? 'cursor-default' : 'active:scale-95'}`}
+                      disabled={!canVote}
+                      className={`relative w-full overflow-hidden rounded-2xl p-3 text-white font-bold transition-all border ${isVoted ? 'border-primary bg-primary/30' : 'border-white/20 bg-white/10 hover:bg-white/20'} ${!canVote ? 'cursor-default' : 'active:scale-95'} ${isMyVibe && 'opacity-90'}`}
                     >
-                      {hasVoted && (
+                      {(hasVoted || isMyVibe) && (
                         <div 
                           className={`absolute left-0 top-0 h-full transition-all duration-1000 ease-out ${isVoted ? 'bg-primary/50' : 'bg-white/20'}`}
                           style={{ width: `${percent}%` }}
@@ -315,7 +316,7 @@ export default function VibeViewerModal({ isOpen, onClose, vibesList, initialInd
                       )}
                       <div className="relative flex justify-between items-center z-10 px-2 drop-shadow-md">
                         <span>{optText}</span>
-                        {hasVoted && <span>{percent}%</span>}
+                        {(hasVoted || isMyVibe) && <span>{percent}%</span>}
                       </div>
                     </button>
                   );
